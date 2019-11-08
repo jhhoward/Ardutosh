@@ -17,6 +17,7 @@ public:
 	static void DrawHexByte(uint8_t val, int16_t x, int16_t y, uint8_t colour);
 	static void DrawHexInt(uint16_t val, int16_t x, int16_t y, uint8_t colour);
 	static void DrawCaret(uint8_t colour);
+	static void DrawChar(char c, int16_t x, int16_t y, uint8_t colour);
 
 	static void DrawInt(int16_t val, uint8_t colour);
 	static void DrawChar(char c, uint8_t colour);

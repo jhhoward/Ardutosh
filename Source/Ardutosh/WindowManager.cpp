@@ -5,6 +5,7 @@
 #include "Platform.h"
 #include "Defines.h"
 #include "Input.h"
+#include "MenuBar.h"
 
 void WindowManager::Init()
 {
@@ -64,6 +65,7 @@ Window* WindowManager::Create(WindowType type, WindowHandler handler)
 			Window* newWindow = &windows[n];
 			newWindow->type = type;
 			newWindow->handler = handler;
+			newWindow->menuItemMask = 0;
 
 			for (int i = 0; i < maxWindows; i++)
 			{
@@ -167,10 +169,13 @@ bool WindowManager::HandleEvent(SystemEvent eventType)
 		Window* window = GetWindow(mouse.x, mouse.y);
 		if (window)
 		{
-			Focus(window);
+			if (!ShowingDialog() || window->type == WindowType::DialogBox)
+			{
+				Focus(window);
 
-			window->HandleEvent(eventType);
-			return true;
+				window->HandleEvent(eventType);
+				return true;
+			}
 		}
 	}
 	else
@@ -181,7 +186,41 @@ bool WindowManager::HandleEvent(SystemEvent eventType)
 			{
 				Window* window = &windows[System::state.stateElement.window];
 				window->HandleEvent(eventType);
+				return false;
 			}
+		}
+
+		for (int n = 0; n < maxWindows; n++)
+		{
+			if (drawOrder[n] != invalidWindowHandle)
+			{
+				windows[drawOrder[n]].HandleEvent(eventType);
+				break;
+			}
+		}
+	}
+
+	if (eventType == SystemEvent::MenuItemClicked)
+	{
+		switch (MenuBar::GetSelectedMenuItem())
+		{
+		case Menu_Special_Restart:
+			{
+				Platform::Reboot();
+			}
+			break;
+		case Menu_Special_CloseAll:
+		{
+			for (int n = 0; n < maxWindows; n++)
+			{
+				Window& win = windows[n];
+				if (win.type == WindowType::FullWindow)
+				{
+					Destroy(&win);
+				}
+			}
+		}
+			break;
 		}
 	}
 
@@ -261,4 +300,32 @@ Window* WindowManager::GetDesktop()
 	}
 
 	return nullptr;
+}
+
+uint16_t WindowManager::GetMenuBarItemMask()
+{
+	MenuBarMask specialMenuItems = Menu_Special_Restart | Menu_Special_CloseAll;
+
+	for (int n = 0; n < maxWindows; n++)
+	{
+		if (drawOrder[n] < maxWindows)
+		{
+			Window& win = windows[drawOrder[n]];
+			if (win.type != WindowType::Closed && win.menuItemMask != 0)
+			{
+				return win.menuItemMask | specialMenuItems;
+			}
+		}
+	}
+
+	return 0;
+}
+
+bool WindowManager::ShowingDialog()
+{
+	if (drawOrder[0] < maxWindows)
+	{
+		return windows[drawOrder[0]].type == WindowType::DialogBox;
+	}
+	return false;
 }

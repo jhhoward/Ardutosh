@@ -16,9 +16,13 @@ public:
 	static Window* GetWindow(int16_t x, int16_t y);
 	static void Focus(Window* window);
 
+	static uint16_t GetMenuBarItemMask();
+
 	static Window* FindByData(void* data);
 	static Window* FindByHandler(WindowHandler handler);
 	static Window* GetDesktop();
+
+	static bool ShowingDialog();
 
 	static constexpr int maxWindows = 8;
 	static Window windows[maxWindows];

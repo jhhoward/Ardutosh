@@ -25,12 +25,14 @@ public:
 	static void DrawPixel(int16_t x, int16_t y, uint8_t colour);
 	static void DrawBitmap(int16_t x, int16_t y, const uint8_t *bitmap);
 	static void DrawSprite(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t frame);	
+
+	static void Reboot();
 };
 
 class PlatformComm
 {
 public:
-	static void SetBaud(uint16_t rate);
+	static void SetBaud(uint32_t rate);
 	static bool IsAvailable();
 	static void Write(uint8_t data);
 	static uint8_t Read();

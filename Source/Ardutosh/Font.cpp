@@ -121,7 +121,7 @@ void Font::DrawChar(char c, uint8_t colour)
 	int16_t y = cursorY;
 	uint8_t fg = colour;
 	uint8_t bg = !colour;
-
+	/*
 	if (data2 & 1)	// Descender e.g. j, g
 	{
 		Platform::DrawPixel(cursorX, y, bg);
@@ -196,6 +196,93 @@ void Font::DrawChar(char c, uint8_t colour)
 		Platform::DrawPixel(cursorX + 1, y, bg);
 		Platform::DrawPixel(cursorX + 2, y, bg);
 		Platform::DrawPixel(cursorX + 3, y, bg);
+	}
+*/
+	if (data2 & 1)	// Descender e.g. j, g
+	{
+		y++;
+
+		if(data1 & 0x80)
+			Platform::DrawPixel(cursorX, y, fg);
+		if (data1 & 0x40)
+			Platform::DrawPixel(cursorX + 1, y, fg);
+		if (data1 & 0x20)
+			Platform::DrawPixel(cursorX + 2, y, fg);
+		y++;
+
+		if (data1 & 0x10)
+			Platform::DrawPixel(cursorX, y, fg);
+		if (data1 & 0x8)
+			Platform::DrawPixel(cursorX + 1, y, fg);
+		if (data1 & 0x4)
+			Platform::DrawPixel(cursorX + 2, y, fg);
+		y++;
+
+		if (data1 & 0x2)
+			Platform::DrawPixel(cursorX, y, fg);
+		if (data1 & 0x1)
+			Platform::DrawPixel(cursorX + 1, y, fg);
+		if (data2 & 0x2)
+			Platform::DrawPixel(cursorX + 2, y, fg);
+		y++;
+
+		if (data2 & 0x80)
+			Platform::DrawPixel(cursorX, y, fg);
+		if (data2 & 0x40)
+			Platform::DrawPixel(cursorX + 1, y, fg);
+		if (data2 & 0x20)
+			Platform::DrawPixel(cursorX + 2, y, fg);
+		y++;
+
+		if (data2 & 0x10)
+			Platform::DrawPixel(cursorX, y, fg);
+		if (data2 & 0x8)
+			Platform::DrawPixel(cursorX + 1, y, fg);
+		if (data2 & 0x4)
+			Platform::DrawPixel(cursorX + 2, y, fg);
+		y++;
+	}
+	else
+	{
+		if (data1 & 0x80)
+			Platform::DrawPixel(cursorX, y, fg);
+		if (data1 & 0x40)
+			Platform::DrawPixel(cursorX + 1, y, fg);
+		if (data1 & 0x20)
+			Platform::DrawPixel(cursorX + 2, y, fg);
+		y++;
+
+		if (data1 & 0x10)
+			Platform::DrawPixel(cursorX, y, fg);
+		if (data1 & 0x8)
+			Platform::DrawPixel(cursorX + 1, y, fg);
+		if (data1 & 0x4)
+			Platform::DrawPixel(cursorX + 2, y, fg);
+		y++;
+
+		if (data1 & 0x2)
+			Platform::DrawPixel(cursorX, y, fg);
+		if (data1 & 0x1)
+			Platform::DrawPixel(cursorX + 1, y, fg);
+		if (data2 & 0x2)
+			Platform::DrawPixel(cursorX + 2, y, fg);
+		y++;
+
+		if (data2 & 0x80)
+			Platform::DrawPixel(cursorX, y, fg);
+		if (data2 & 0x40)
+			Platform::DrawPixel(cursorX + 1, y, fg);
+		if (data2 & 0x20)
+			Platform::DrawPixel(cursorX + 2, y, fg);
+		y++;
+
+		if (data2 & 0x10)
+			Platform::DrawPixel(cursorX, y, fg);
+		if (data2 & 0x8)
+			Platform::DrawPixel(cursorX + 1, y, fg);
+		if (data2 & 0x4)
+			Platform::DrawPixel(cursorX + 2, y, fg);
+		y++;
 	}
 
 	cursorX += glyphWidth;
@@ -275,10 +362,10 @@ void Font::DrawHexInt(uint16_t val, int16_t x, int16_t y, uint8_t colour)
 {
 	cursorX = x;
 	cursorY = y;
-	DrawHexNibble(val >> 12, colour);
-	DrawHexNibble(val >> 8, colour);
-	DrawHexNibble(val >> 4, colour);
-	DrawHexNibble(val, colour);
+	DrawHexNibble((uint8_t)(val >> 12), colour);
+	DrawHexNibble((uint8_t)(val >> 8), colour);
+	DrawHexNibble((uint8_t)(val >> 4), colour);
+	DrawHexNibble((uint8_t)(val), colour);
 }
 
 void Font::DrawInt(int16_t val, int16_t x, int16_t y, uint8_t colour)
@@ -286,6 +373,13 @@ void Font::DrawInt(int16_t val, int16_t x, int16_t y, uint8_t colour)
 	cursorX = x;
 	cursorY = y;
 	DrawInt(val, colour);
+}
+
+void Font::DrawChar(char c, int16_t x, int16_t y, uint8_t colour)
+{
+	cursorX = x;
+	cursorY = y;
+	DrawChar(c, colour);
 }
 
 void Font::DrawInt(int16_t val, uint8_t colour)

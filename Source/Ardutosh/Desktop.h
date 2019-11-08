@@ -11,6 +11,4 @@ public:
 
 	static void SplashHandler(class Window* window, SystemEvent event);
 	static void ShowSplash();
-
-	static constexpr int menuBarHeight = 8;
 };

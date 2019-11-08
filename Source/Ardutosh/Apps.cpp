@@ -3,9 +3,11 @@
 #include "Font.h"
 #include "Platform.h"
 #include "System.h"
+#include "MenuBar.h"
+#include "Keyboard.h"
 #include "Generated/Sprites.h"
 
-const char ReadmeContents[] PROGMEM = "Welcome to the Arduboy desktop environment. Written by James Howard for the Arduboy game jam 4: theme 'not a game'.";
+const char ReadmeContents[] PROGMEM = "Welcome to the Arduboy desktop environment!\nWritten by James Howard for the Arduboy game jam 4 where the theme was 'not a game'.\nThe graphical style is based on the classic Macintosh interface.";
 
 Window* Apps::OpenTerminalApp()
 {
@@ -32,6 +34,44 @@ Window* Apps::OpenTerminalApp()
 	return nullptr;
 }
 
+void Apps::SetBaudRateDialog(Window* window, SystemEvent eventType)
+{
+	constexpr int dialogWidth = 96;
+	constexpr int dialogHeight = 48;
+	constexpr int numOptions = 4;
+	constexpr int selectionSpacing = 7;
+	constexpr int defaultBaudRateSelection = 1;
+	static const int bauds[numOptions] = { 4800, 9600, 14400, 19200 };
+	static uint8_t selection = defaultBaudRateSelection;
+
+	window->w = dialogWidth;
+	window->h = dialogHeight;
+	window->x = DISPLAY_WIDTH / 2 - dialogWidth / 2;
+	window->y = MenuBar::height;
+
+	window->Label(FlashString("Baud rate:"), 6, 6);
+
+	int selectionX = 6;
+	int selectionY = 14;
+	for (int n = 0; n < numOptions; n++)
+	{
+		window->RadioButton(selectionX, selectionY, 32, n, selection);
+		window->Label(bauds[n], selectionX + 12, selectionY);
+		selectionY += selectionSpacing;
+	}
+
+	if (window->Button(FlashString("Default"), window->w - 36, window->h - 27))
+	{
+		selection = defaultBaudRateSelection;
+		PlatformComm::SetBaud(bauds[selection]);
+	}
+	if (window->Button(FlashString("  OK  "), window->w - 36, window->h - 16))
+	{
+		PlatformComm::SetBaud(bauds[selection]);
+		WindowManager::Destroy(window);
+	}
+}
+
 void Apps::TerminalApp(Window* window, SystemEvent eventType)
 {
 	constexpr int maxVisibleLines = 6;
@@ -47,6 +87,8 @@ void Apps::TerminalApp(Window* window, SystemEvent eventType)
 	int numLinesInBuffer = str.NumLines(numColumns);
 	uint16_t maxScroll = 0;
 
+	window->menuItemMask = Menu_File_Close | Menu_File_DumpEEPROM | Menu_Edit_Clear | Menu_Edit_SetBaud;
+
 	if (numRows < numLinesInBuffer)
 	{
 		maxScroll = numLinesInBuffer - numRows;
@@ -54,7 +96,34 @@ void Apps::TerminalApp(Window* window, SystemEvent eventType)
 
 	window->VerticalScrollBar(scrollPosition, maxScroll);
 
-	if (eventType == SystemEvent::Repaint)
+	if (eventType == SystemEvent::MenuItemClicked)
+	{
+		switch (MenuBar::GetSelectedMenuItem())
+		{
+		case Menu_Edit_Clear:
+			for (int n = 0; n < bufferSize; n++)
+				buffer[n] = '\0';
+			bufferPos = 0;
+			break;
+		case Menu_File_Close:
+			WindowManager::Destroy(window);
+			break;
+		case Menu_File_DumpEEPROM:
+			for (uint16_t address = 0; address < 1024; address++)
+			{
+				PlatformComm::Write(PlatformStorage::GetByte(address));
+			}
+			break;
+		case Menu_Edit_SetBaud:
+			WindowManager::Create(WindowType::DialogBox, SetBaudRateDialog);
+			break;
+		}
+	}
+	else if (eventType == SystemEvent::KeyPressed)
+	{
+		PlatformComm::Write(Keyboard::GetLastKeyPressed());
+	}
+	else if (eventType == SystemEvent::Repaint)
 	{
 		Font::DrawStringWindowed(str.SubstringAtLine(scrollPosition, numColumns), window->x + 2, window->y + 11, window->w - 15, window->h - 12, BLACK);
 		Font::DrawCaret(BLACK);
@@ -157,6 +226,17 @@ void Apps::FinderApp(Window* window, SystemEvent eventType)
 	int itemX = itemsStartX;
 	int itemY = itemsStartY;
 
+	window->menuItemMask = Menu_File_Close;
+	if (eventType == SystemEvent::MenuItemClicked)
+	{
+		switch (MenuBar::GetSelectedMenuItem())
+		{
+		case Menu_File_Close:
+			WindowManager::Destroy(window);
+			break;
+		}
+	}
+
 	if (window->Item(terminalIcon, FlashString("Terminal"), itemX, itemY))
 	{
 		if (Window* win = OpenTerminalApp())
@@ -228,8 +308,8 @@ Window* Apps::OpenTextReader(const xString& title, const xString& contents)
 		win->title = title;
 		win->data = (void*) contents.GetData();
 		win->x = 12;
-		win->y = 12;
-		win->w = 100;
+		win->y = 9;
+		win->w = 86;
 		win->h = 54;
 		return win;
 	}
@@ -257,6 +337,17 @@ void Apps::TextReaderApp(Window* window, SystemEvent eventType)
 	if (eventType == SystemEvent::Repaint)
 	{
 		Font::DrawStringWindowed(str.SubstringAtLine(currentScroll, numColumns), window->x + 2, window->y + 11, textAreaWidth, textAreaHeight, BLACK);
+	}
+
+	window->menuItemMask = Menu_File_Close;
+	if (eventType == SystemEvent::MenuItemClicked)
+	{
+		switch (MenuBar::GetSelectedMenuItem())
+		{
+		case Menu_File_Close:
+			WindowManager::Destroy(window);
+			break;
+		}
 	}
 }
 
@@ -295,6 +386,17 @@ void Apps::EEPROMInspectorApp(Window* window, SystemEvent eventType)
 	int outY = window->y + 10;
 
 	window->VerticalScrollBar(scrollLocation, maxScrollLocation);
+
+	window->menuItemMask = Menu_File_Close;
+	if (eventType == SystemEvent::MenuItemClicked)
+	{
+		switch (MenuBar::GetSelectedMenuItem())
+		{
+		case Menu_File_Close:
+			WindowManager::Destroy(window);
+			break;
+		}
+	}
 
 	if (eventType == SystemEvent::Repaint)
 	{
@@ -416,6 +518,21 @@ void Apps::BatteryApp(Window* window, SystemEvent eventType)
 		}
 		else timer--;
 	}
+
+	window->menuItemMask = Menu_File_Close | Menu_Edit_Clear;
+	if (eventType == SystemEvent::MenuItemClicked)
+	{
+		switch (MenuBar::GetSelectedMenuItem())
+		{
+		case Menu_File_Close:
+			WindowManager::Destroy(window);
+			break;
+		case Menu_Edit_Clear:
+			for (int n = 0; n < bufferSize; n++)
+				buffer[n] = 0;
+			break;
+		}
+	}
 }
 
 Window* Apps::OpenTemperatureApp()
@@ -508,6 +625,20 @@ void Apps::TemperatureApp(Window* window, SystemEvent eventType)
 		else timer--;
 	}
 
+	window->menuItemMask = Menu_File_Close | Menu_Edit_Clear;
+	if (eventType == SystemEvent::MenuItemClicked)
+	{
+		switch (MenuBar::GetSelectedMenuItem())
+		{
+		case Menu_File_Close:
+			WindowManager::Destroy(window);
+			break;
+		case Menu_Edit_Clear:
+			for (int n = 0; n < bufferSize; n++)
+				buffer[n] = 0;
+			break;
+		}
+	}
 }
 
 Window* Apps::OpenLEDApp()
@@ -554,11 +685,11 @@ void Apps::LEDApp(Window* window, SystemEvent eventType)
 	window->Slider(sliderX, outY, sliderWidth, blue);
 	outY += sliderSpacing;
 
-	if (window->Button(FlashString("Off"), window->w / 3 - 10, outY - 8))
+	if (window->Button(FlashString("Off"), window->w / 3 - 10, outY))
 	{
 		red = green = blue = 0;
 	}
-	if (window->Button(FlashString("All on"), 2 * window->w / 3 - 15, outY - 8))
+	if (window->Button(FlashString("All on"), 2 * window->w / 3 - 15, outY))
 	{
 		red = green = blue = 255;
 	}
@@ -566,5 +697,16 @@ void Apps::LEDApp(Window* window, SystemEvent eventType)
 	if (eventType == SystemEvent::Tick)
 	{
 		Platform::SetLED(red, green, blue);
+	}
+
+	window->menuItemMask = Menu_File_Close;
+	if (eventType == SystemEvent::MenuItemClicked)
+	{
+		switch (MenuBar::GetSelectedMenuItem())
+		{
+		case Menu_File_Close:
+			WindowManager::Destroy(window);
+			break;
+		}
 	}
 }

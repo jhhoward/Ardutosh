@@ -10,5 +10,7 @@ enum class SystemEvent : uint8_t
 	MouseMove,
 	Tick,
 	OpenWindow,
-	CloseWindow
+	CloseWindow,
+	MenuItemClicked,
+	KeyPressed
 };

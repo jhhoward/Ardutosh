@@ -25,6 +25,8 @@ public:
 	void VerticalScrollBar(uint16_t& current, uint16_t max);
 	void Slider(int16_t x, int16_t y, uint8_t w, uint8_t& current);
 	void Label(const xString& label, int16_t x, int16_t y);
+	void Label(int16_t label, int16_t x, int16_t y);
+	bool RadioButton(int16_t x, int16_t y, uint8_t w, uint8_t index, uint8_t& selected);
 
 	void OpenWithAnimation(uint8_t fromX, uint8_t fromY);
 	void HandleEvent(SystemEvent eventType);
@@ -38,6 +40,8 @@ public:
 	int x, y;
 	uint8_t w, h;
 	uint8_t originX, originY;
+
+	uint16_t menuItemMask;
 
 private:
 	bool IsMouseOverCloseButton() const;

@@ -685,6 +685,13 @@ int main(int argc, char* argv[])
 	EncodeSprite2D(typeFile, dataFile, "Assets/battery-icon.png", "batteryIcon");
 	EncodeSprite2D(typeFile, dataFile, "Assets/temperature-icon.png", "temperatureIcon");
 	EncodeSprite2D(typeFile, dataFile, "Assets/led-icon.png", "ledIcon");
+	EncodeSprite2D(typeFile, dataFile, "Assets/radio-on-button.png", "radioOnButton");
+	EncodeSprite2D(typeFile, dataFile, "Assets/radio-off-button.png", "radioOffButton");
+	EncodeSprite2D(typeFile, dataFile, "Assets/backspace-icon.png", "backspaceIcon");
+	EncodeSprite2D(typeFile, dataFile, "Assets/shift-icon.png", "shiftIcon");
+	EncodeSprite2D(typeFile, dataFile, "Assets/AZ-icon.png", "alphaIcon");
+	EncodeSprite2D(typeFile, dataFile, "Assets/numbers-icon.png", "numbersIcon");
+	EncodeSprite2D(typeFile, dataFile, "Assets/return-icon.png", "returnIcon");
 
 	dataFile.close();
 	typeFile.close();

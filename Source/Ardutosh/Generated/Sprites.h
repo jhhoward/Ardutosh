@@ -22,3 +22,17 @@ extern const uint8_t batteryIcon[];
 extern const uint8_t temperatureIcon[];
 // Generated from Assets/led-icon.png
 extern const uint8_t ledIcon[];
+// Generated from Assets/radio-on-button.png
+extern const uint8_t radioOnButton[];
+// Generated from Assets/radio-off-button.png
+extern const uint8_t radioOffButton[];
+// Generated from Assets/backspace-icon.png
+extern const uint8_t backspaceIcon[];
+// Generated from Assets/shift-icon.png
+extern const uint8_t shiftIcon[];
+// Generated from Assets/AZ-icon.png
+extern const uint8_t alphaIcon[];
+// Generated from Assets/numbers-icon.png
+extern const uint8_t numbersIcon[];
+// Generated from Assets/return-icon.png
+extern const uint8_t returnIcon[];

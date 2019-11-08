@@ -6,6 +6,7 @@
 #include "WindowManager.h"
 #include "Generated/Sprites.h"
 #include "Apps.h"
+#include "MenuBar.h"
 
 void* finderHandle = (void*)1;
 void* trashFinderHandle = (void*)2;
@@ -17,7 +18,9 @@ void Desktop::Handler(Window* window, SystemEvent event)
 	constexpr int itemHeight = 18;
 
 	constexpr int itemsX = DISPLAY_WIDTH - itemWidth - padding;
-	constexpr int itemsY = menuBarHeight + padding;
+	constexpr int itemsY = MenuBar::height + padding;
+
+	window->menuItemMask = Menu_File_Close;
 
 	if (window->Item(arduboyIcon, FlashString("Arduboy"), itemsX, itemsY))
 	{

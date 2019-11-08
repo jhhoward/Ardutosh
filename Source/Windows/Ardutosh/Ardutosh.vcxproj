@@ -124,6 +124,7 @@
     <ClCompile Include="..\..\Ardutosh\Desktop.cpp" />
     <ClCompile Include="..\..\Ardutosh\Font.cpp" />
     <ClCompile Include="..\..\Ardutosh\Input.cpp" />
+    <ClCompile Include="..\..\Ardutosh\Keyboard.cpp" />
     <ClCompile Include="..\..\Ardutosh\MenuBar.cpp" />
     <ClCompile Include="..\..\Ardutosh\StringWrapper.cpp" />
     <ClCompile Include="..\..\Ardutosh\System.cpp" />
@@ -139,6 +140,7 @@
     <ClInclude Include="..\..\Ardutosh\Element.h" />
     <ClInclude Include="..\..\Ardutosh\Font.h" />
     <ClInclude Include="..\..\Ardutosh\Input.h" />
+    <ClInclude Include="..\..\Ardutosh\Keyboard.h" />
     <ClInclude Include="..\..\Ardutosh\MenuBar.h" />
     <ClInclude Include="..\..\Ardutosh\StringWrapper.h" />
     <ClInclude Include="..\..\Ardutosh\System.h" />

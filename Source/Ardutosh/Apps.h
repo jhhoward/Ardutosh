@@ -24,4 +24,6 @@ private:
 	static void TemperatureApp(Window* window, SystemEvent eventType);
 	static void LEDApp(Window* window, SystemEvent eventType);
 	static void EEPROMInspectorApp(Window* window, SystemEvent eventType);
+
+	static void SetBaudRateDialog(Window* window, SystemEvent eventType);
 };

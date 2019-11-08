@@ -6,6 +6,7 @@
 #include "Input.h"
 #include "Desktop.h"
 #include "WindowManager.h"
+#include "MenuBar.h"
 #include "Generated/Sprites.h"
 
 Window WindowManager::windows[maxWindows];
@@ -94,9 +95,9 @@ void Window::HandleEvent(SystemEvent eventType)
 	{
 		if (eventType == SystemEvent::MouseMove)
 		{
-			if (y + mouse.deltaY < Desktop::menuBarHeight)
+			if (y + mouse.deltaY < MenuBar::height)
 			{
-				mouse.deltaY = Desktop::menuBarHeight - y;
+				mouse.deltaY = MenuBar::height - y;
 			}
 
 			x += mouse.deltaX;
@@ -171,7 +172,7 @@ bool Window::Button(xString label, int16_t buttonX, int16_t buttonY)
 
 	bool result = false;
 	buttonX += x;
-	buttonY += y + windowBarHeight;
+	buttonY += y;// +windowBarHeight;
 
 	constexpr int buttonPadding = 4;
 	int labelLength = label.Length() * Font::glyphWidth;
@@ -283,6 +284,39 @@ void Window::Label(const xString& label, int16_t labelX, int16_t labelY)
 	{
 		Font::DrawString(label, labelX, labelY, BLACK);
 	}
+}
+
+void Window::Label(int16_t label, int16_t labelX, int16_t labelY)
+{
+	labelX += x;
+	labelY += y;
+
+	if (System::state.currentEvent == SystemEvent::Repaint)
+	{
+		Font::DrawInt(label, labelX, labelY, BLACK);
+	}
+}
+
+bool Window::RadioButton(int16_t buttonX, int16_t buttonY, uint8_t buttonWidth, uint8_t index, uint8_t& selected)
+{
+	constexpr int buttonHeight = 6;
+	buttonX += x;
+	buttonY += y;
+
+	if (System::state.currentEvent == SystemEvent::Repaint)
+	{
+		Platform::DrawSprite(buttonX, buttonY, index == selected ? radioOnButton : radioOffButton, 0);
+	}
+	else if (System::state.currentEvent == SystemEvent::MouseDown)
+	{
+		if (mouse.x >= buttonX && mouse.y >= buttonY && mouse.x <= buttonX + buttonWidth && mouse.y <= buttonY + buttonHeight)
+		{
+			selected = index;
+			System::MarkScreenDirty();
+			return true;
+		}
+	}
+	return false;
 }
 
 void Window::VerticalScrollBar(uint16_t& current, uint16_t max)

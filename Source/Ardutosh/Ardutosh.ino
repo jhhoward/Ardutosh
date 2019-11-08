@@ -119,7 +119,7 @@ void Platform::SetAudioEnabled(bool isEnabled)
 		arduboy.audio.off();
 }
 
-void PlatformComm::SetBaud(uint16_t rate)
+void PlatformComm::SetBaud(uint32_t rate)
 {
 	Serial.flush();
 	Serial.begin(rate);
@@ -176,6 +176,12 @@ int16_t Platform::GetTemperature()
 {
 	constexpr int offset = -7;
 	return rawADC(ADC_TEMP) - 273 + offset;
+}
+
+void Platform::Reboot()
+{
+	void(* resetFunc) (void) = 0;
+	resetFunc();
 }
 
 void setup()

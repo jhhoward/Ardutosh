@@ -7,6 +7,7 @@
 #include "Input.h"
 #include "WindowManager.h"
 #include "MenuBar.h"
+#include "Keyboard.h"
 
 #include "Generated/Sprites.inc.h"
 
@@ -54,7 +55,12 @@ void System::Init()
 void System::Tick()
 {
 	HandleEvent(SystemEvent::Tick);
-	mouse.Tick();
+
+	if (!Keyboard::IsVisible())
+	{
+		mouse.Tick();
+	}
+
 	state.animationTimer++;
 }
 
@@ -67,6 +73,7 @@ void System::Draw()
 {
 	if (!screenDirty)
 	{
+		Keyboard::Update();
 		return;
 	}
 
@@ -82,7 +89,11 @@ void System::Draw()
 	//Font::DrawString("asdfghjkl", 0, DISPLAY_HEIGHT - 16, BLACK);
 	//Font::DrawString(" zxcvbnm", 0, DISPLAY_HEIGHT - 8, BLACK);
 
-	mouse.Draw();
+	if (!Keyboard::IsVisible())
+	{
+		mouse.Draw();
+	}
+	Keyboard::Update();
 
 	state.currentEvent = SystemEvent::None;
 
@@ -93,7 +104,7 @@ void System::DrawBG()
 {
 	uint8_t* ptr = Platform::GetScreenBuffer();
 
-	if (WindowManager::GetDesktop())
+	if (MenuBar::IsVisible())
 	{
 		// Menu bar
 		*ptr++ = 0x7c;
@@ -144,13 +155,8 @@ void System::HandleEvent(SystemEvent eventType)
 {
 	state.currentEvent = eventType;
 
-	if (!MenuBar::HandleEvent(eventType))
-	{
-		if (!WindowManager::HandleEvent(eventType))
-		{
-
-		}
-	}
+	WindowManager::HandleEvent(eventType);
+	MenuBar::HandleEvent(eventType);
 
 	state.currentEvent = SystemEvent::None;
 }

@@ -17,7 +17,8 @@ public:
 		ScrollingWindow,
 		OpeningWindowAnimation,
 		ClosingWindowAnimation,
-		DraggingSlider
+		DraggingSlider,
+		OpeningMenu
 	};
 
 	struct StateData

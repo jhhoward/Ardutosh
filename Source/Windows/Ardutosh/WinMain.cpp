@@ -405,7 +405,7 @@ void Platform::DrawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t 
 char testCommString[] = "This is some test data to test how the terminal processes and displays text.\nHere is another line of stuff.\nAnd another line.\nMore message to stress test the system and to ensure that auto scrolling is working correctly etc.";
 unsigned int testCommPos = 0;
 
-void PlatformComm::SetBaud(uint16_t rate)
+void PlatformComm::SetBaud(uint32_t rate)
 {
 	testCommPos = 0;
 }
@@ -446,6 +446,11 @@ uint16_t Platform::GetBatteryVoltage()
 int16_t Platform::GetTemperature()
 {
 	return 20 + (rand() % 5);
+}
+
+void Platform::Reboot()
+{
+	// stub
 }
 
 void DebugDisplayNow()
