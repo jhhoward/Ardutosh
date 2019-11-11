@@ -13,8 +13,7 @@ Window WindowManager::windows[maxWindows];
 uint8_t WindowManager::drawOrder[maxWindows];
 uint8_t WindowManager::currentElementIndex;
 
-constexpr int windowBarHeight = 8;
-constexpr int closeButtonSize = windowBarHeight - 4;
+constexpr int closeButtonSize = Window::windowBarHeight - 4;
 constexpr int closeButtonX = 5;
 
 Element Window::GetCurrentElement() const
@@ -24,6 +23,11 @@ Element Window::GetCurrentElement() const
 
 void Window::Draw()
 {
+	if (type != WindowType::DialogBox)
+	{
+		WindowManager::menuBarItemMask = 0;
+	}
+
 	if (type == WindowType::FullWindow)
 	{
 		Platform::FillRect(x, y, w, h, WHITE);
@@ -89,6 +93,11 @@ void Window::HandleEvent(SystemEvent eventType)
 				}
 			}
 		}
+
+		if (MenuItem(Menu_File_Close))
+		{
+			WindowManager::Destroy(this);
+		}
 	}
 
 	if (System::state.currentState == System::State::DraggingWindow)
@@ -125,8 +134,10 @@ void Window::HandleEvent(SystemEvent eventType)
 	}
 }
 
-bool Window::Item(const uint8_t* icon, const xString& label, int16_t x, int16_t y)
+bool Window::Item(const uint8_t* icon, const xString& label, int16_t itemX, int16_t itemY)
 {
+	itemX += x;
+	itemY += y;
 	WindowManager::currentElementIndex++;
 
 	bool result = false;
@@ -135,17 +146,17 @@ bool Window::Item(const uint8_t* icon, const xString& label, int16_t x, int16_t 
 	constexpr int labelPadding = 2;
 	int labelWidth = label.Length() * Font::glyphWidth + labelPadding;
 	int labelHeight = Font::glyphHeight + labelPadding;
-	int labelX = x + iconWidth / 2 - labelWidth / 2;
-	int labelY = y + iconHeight;
+	int labelX = itemX + iconWidth / 2 - labelWidth / 2;
+	int labelY = itemY + iconHeight;
 
-	bool mouseOverItem = mouse.x >= x && mouse.y >= y && mouse.x < x + iconWidth && mouse.y < y + iconHeight;
+	bool mouseOverItem = mouse.x >= itemX && mouse.y >= itemY && mouse.x < itemX + iconWidth && mouse.y < itemY + iconHeight;
 	mouseOverItem |= mouse.x >= labelX && mouse.y >= labelY && mouse.x < labelX + labelWidth && mouse.y < labelY + labelHeight;
 	bool isSelected = System::state.selectedElement == GetCurrentElement();
 
 	switch (System::state.currentEvent)
 	{
 	case SystemEvent::Repaint:
-		Platform::DrawSprite(x, y, icon, 0);
+		Platform::DrawSprite(itemX, itemY, icon, 0);
 		Platform::FillRect(labelX, labelY, labelWidth, labelHeight, isSelected ? BLACK : WHITE);
 		Font::DrawString(label, labelX + 1, labelY + 1, isSelected ? WHITE : BLACK);
 		break;
@@ -157,6 +168,7 @@ bool Window::Item(const uint8_t* icon, const xString& label, int16_t x, int16_t 
 				result = true;
 			}
 			System::state.selectedElement = GetCurrentElement();
+			System::MarkEventHandled();
 			System::MarkScreenDirty();
 		}
 		break;
@@ -198,6 +210,7 @@ bool Window::Button(xString label, int16_t buttonX, int16_t buttonY)
 		{
 			System::EnterState(System::State::ClickingButton, GetCurrentElement());
 			System::MarkScreenDirty();
+			System::MarkEventHandled();
 		}
 		break;
 	case SystemEvent::MouseMove:
@@ -215,6 +228,7 @@ bool Window::Button(xString label, int16_t buttonX, int16_t buttonY)
 			}
 			System::ExitState(System::State::ClickingButton);
 			System::MarkScreenDirty();
+			System::MarkEventHandled();
 		}
 		break;
 	}
@@ -222,7 +236,14 @@ bool Window::Button(xString label, int16_t buttonX, int16_t buttonY)
 	return result;
 }
 
-void Window::Slider(int16_t sliderX, int16_t sliderY, uint8_t sliderWidth, uint8_t& current)
+bool Window::MenuItem(MenuBarMask item)
+{
+	WindowManager::menuBarItemMask |= item;
+
+	return (System::state.currentEvent == SystemEvent::MenuItemClicked) && MenuBar::GetSelectedMenuItem() == item;
+}
+
+void Window::Slider(int16_t sliderX, int16_t sliderY, uint8_t sliderWidth, uint8_t& current, uint8_t min, uint8_t max)
 {
 	WindowManager::currentElementIndex++;
 
@@ -234,7 +255,7 @@ void Window::Slider(int16_t sliderX, int16_t sliderY, uint8_t sliderWidth, uint8
 	int innerLength = sliderWidth - 4;
 	int innerX = sliderX + 2;
 
-	int widgetPos = innerX + (current * innerLength) / 255;
+	int widgetPos = innerX + ((current - min) * innerLength) / (max - min);
 	int widgetDrawX = widgetPos - widgetSize / 2;
 	int widgetDrawY = sliderY + sliderHeight / 2 - widgetSize / 2;
 	
@@ -252,16 +273,17 @@ void Window::Slider(int16_t sliderX, int16_t sliderY, uint8_t sliderWidth, uint8
 		if (mouse.x >= widgetDrawX && mouse.y >= widgetDrawY && mouse.x < widgetDrawX + widgetSize && mouse.y < widgetDrawY + widgetSize)
 		{
 			System::EnterState(System::State::DraggingSlider, GetCurrentElement());
+			System::MarkEventHandled();
 		}
 		break;
 	case SystemEvent::MouseMove:
 		if (System::state.currentState == System::State::DraggingSlider && System::state.stateElement == GetCurrentElement())
 		{
-			int newValue = ((mouse.x - innerX) * 255) / innerLength;
-			if (newValue < 0)
-				newValue = 0;
-			else if (newValue > 255)
-				newValue = 255;
+			int newValue = ((mouse.x - innerX) * (max - min)) / innerLength + min;
+			if (newValue < min)
+				newValue = min;
+			else if (newValue > max)
+				newValue = max;
 			current = newValue;
 			System::MarkScreenDirty();
 		}
@@ -270,6 +292,7 @@ void Window::Slider(int16_t sliderX, int16_t sliderY, uint8_t sliderWidth, uint8
 		if (System::state.currentState == System::State::DraggingSlider && System::state.stateElement == GetCurrentElement())
 		{
 			System::ExitState(System::State::DraggingSlider);
+			System::MarkEventHandled();
 		}
 		break;
 	}
@@ -313,6 +336,7 @@ bool Window::RadioButton(int16_t buttonX, int16_t buttonY, uint8_t buttonWidth, 
 		{
 			selected = index;
 			System::MarkScreenDirty();
+			System::MarkEventHandled();
 			return true;
 		}
 	}
@@ -368,6 +392,7 @@ void Window::VerticalScrollBar(uint16_t& current, uint16_t max)
 				{
 					current--;
 					System::MarkScreenDirty();
+					System::MarkEventHandled();
 				}
 			}
 			else if (mouse.y > scrollBarY2 - 11)
@@ -376,11 +401,13 @@ void Window::VerticalScrollBar(uint16_t& current, uint16_t max)
 				{
 					current++;
 					System::MarkScreenDirty();
+					System::MarkEventHandled();
 				}
 			}
 			else if(mouse.y >= widgetPos && mouse.y < widgetPos + scrollWidgetSize)
 			{	// Widget
 				System::EnterState(System::State::ScrollingWindow, GetCurrentElement());
+				System::MarkEventHandled();
 			}
 			else
 			{	// Bar
@@ -392,6 +419,7 @@ void Window::VerticalScrollBar(uint16_t& current, uint16_t max)
 
 				current = ((newWidgetPos - innerY) * max) / innerLength;
 				System::MarkScreenDirty();
+				System::MarkEventHandled();
 			}
 		}
 		break;
@@ -413,6 +441,7 @@ void Window::VerticalScrollBar(uint16_t& current, uint16_t max)
 		if (System::state.currentState == System::State::ScrollingWindow && System::state.stateElement == GetCurrentElement())
 		{
 			System::ExitState(System::State::ScrollingWindow);
+			System::MarkEventHandled();
 		}
 		break;
 	}
@@ -436,3 +465,7 @@ WindowHandle Window::GetHandle() const
 	return WindowManager::invalidWindowHandle;
 }
 
+bool Window::IsFocused()
+{
+	return WindowManager::drawOrder[0] == GetHandle();
+}

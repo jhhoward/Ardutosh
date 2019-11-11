@@ -42,4 +42,22 @@ class PlatformStorage
 {
 public:
 	static uint8_t GetByte(uint16_t address);
+	static void SetByte(uint16_t address, uint8_t value);
+};
+
+class PlatformRemote
+{
+public:
+	static void SetKeyboardEnabled(bool enabled);
+	static bool IsKeyboardEnabled();
+	static void KeyboardWrite(uint8_t data);
+	
+	static void SetMouseEnabled(bool enabled);
+	static bool IsMouseEnabled();
+	static void MouseMove(int dirX, int dirY);
+	static void MouseDown();
+	static void MouseUp();
+
+	static void SetGamepadEnabled(bool enabled);
+	static bool IsGamepadEnabled();
 };

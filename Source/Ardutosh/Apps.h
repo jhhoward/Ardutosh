@@ -14,7 +14,9 @@ public:
 	static Window* OpenBatteryApp();
 	static Window* OpenTemperatureApp();
 	static Window* OpenLEDApp();
+	static Window* OpenRemoteApp();
 	static Window* OpenTextReader(const xString& title, const xString& contents);
+	static Window* OpenReadme();
 
 private:
 	static void TerminalApp(Window* window, SystemEvent eventType);
@@ -24,6 +26,7 @@ private:
 	static void TemperatureApp(Window* window, SystemEvent eventType);
 	static void LEDApp(Window* window, SystemEvent eventType);
 	static void EEPROMInspectorApp(Window* window, SystemEvent eventType);
+	static void RemoteApp(Window* window, SystemEvent eventType);
 
 	static void SetBaudRateDialog(Window* window, SystemEvent eventType);
 };

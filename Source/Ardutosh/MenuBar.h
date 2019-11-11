@@ -30,5 +30,5 @@ public:
 private:
 	static const struct MenuItem* selectedItem;
 	static void Draw();
-	static const MenuItem* MenuBar::GetItemUnderMouse();
+	static const MenuItem* GetItemUnderMouse();
 };

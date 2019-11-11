@@ -5,7 +5,7 @@
 #include "System.h"
 #include "Generated/Sprites.h"
 
-void Mouse::Tick()
+void VirtualMouse::Tick()
 {
 	RestoreBackgroundPixels();
 
@@ -117,28 +117,56 @@ void Mouse::Tick()
 	}
 	*/
 
-	if (deltaX != 0 || deltaY != 0)
+	if (PlatformRemote::IsGamepadEnabled())
 	{
-		System::HandleEvent(SystemEvent::MouseMove);
+		lastInput = input;
+		x = oldX;
+		y = oldY;
 	}
-
-	if ((input & INPUT_B) && !(lastInput & INPUT_B))
+	else if (PlatformRemote::IsMouseEnabled())
 	{
-		System::HandleEvent(SystemEvent::MouseDown);
+		if (deltaX != 0 || deltaY != 0)
+		{
+			PlatformRemote::MouseMove(deltaX * remoteMouseSpeed, deltaY * remoteMouseSpeed);
+		}
+		if ((input & INPUT_B) && !(lastInput & INPUT_B))
+		{
+			PlatformRemote::MouseDown();
+		}
+		if (!(input & INPUT_B) && (lastInput & INPUT_B))
+		{
+			PlatformRemote::MouseUp();
+		}
+
+		lastInput = input;
+		x = oldX;
+		y = oldY;
 	}
-	if (!(input & INPUT_B) && (lastInput & INPUT_B))
+	else
 	{
-		System::HandleEvent(SystemEvent::MouseUp);
+		if (deltaX != 0 || deltaY != 0)
+		{
+			System::HandleEvent(SystemEvent::MouseMove);
+		}
+
+		if ((input & INPUT_B) && !(lastInput & INPUT_B))
+		{
+			System::HandleEvent(SystemEvent::MouseDown);
+		}
+		if (!(input & INPUT_B) && (lastInput & INPUT_B))
+		{
+			System::HandleEvent(SystemEvent::MouseUp);
+		}
+
+		lastInput = input;
+		x = oldX + deltaX;
+		y = oldY + deltaY;
+
+		Draw();
 	}
-
-	lastInput = input;
-	x = oldX + deltaX;
-	y = oldY + deltaY;
-
-	Draw();
 }
 
-void Mouse::Draw()
+void VirtualMouse::Draw()
 {
 	uint8_t* bgPtr = backgroundPixels;
 
@@ -157,10 +185,13 @@ void Mouse::Draw()
 		}
 	}
 
+	if (PlatformRemote::IsMouseEnabled())
+		return;
+
 	Platform::DrawSprite(x, y, mouseCursorSprite, 0);
 }
 
-void Mouse::RestoreBackgroundPixels()
+void VirtualMouse::RestoreBackgroundPixels()
 {
 	uint8_t* bgPtr = backgroundPixels;
 

@@ -6,6 +6,9 @@
 #include "Defines.h"
 #include "Input.h"
 #include "MenuBar.h"
+#include "VirtualKeyboard.h"
+
+uint16_t WindowManager::menuBarItemMask;
 
 void WindowManager::Init()
 {
@@ -29,7 +32,9 @@ void WindowManager::Draw()
 
 		if (!isWindowAnimating)
 		{
+			VirtualKeyboard::ApplyScreenShift(win.x, win.y);
 			win.Draw();
+			VirtualKeyboard::UnapplyScreenShift(win.x, win.y);
 		}
 	}
 }
@@ -65,7 +70,6 @@ Window* WindowManager::Create(WindowType type, WindowHandler handler)
 			Window* newWindow = &windows[n];
 			newWindow->type = type;
 			newWindow->handler = handler;
-			newWindow->menuItemMask = 0;
 
 			for (int i = 0; i < maxWindows; i++)
 			{
@@ -304,21 +308,30 @@ Window* WindowManager::GetDesktop()
 
 uint16_t WindowManager::GetMenuBarItemMask()
 {
-	MenuBarMask specialMenuItems = Menu_Special_Restart | Menu_Special_CloseAll;
+	//System::State oldSystemState = System::state.currentState;
+	//System::state.currentState = SystemEvent::GatherMenuItems;
+	//menuBarItemMask = 0;
+	//
+	//for (int n = 0; n < maxWindows; n++)
+	//{
+	//	if (drawOrder[n] < maxWindows)
+	//	{
+	//		Window& win = windows[drawOrder[n]];
+	//		if (win.type != WindowType::Closed)
+	//		{
+	//			win.HandleEvent(SystemEvent::GatherMenuItems);
+	//			if (menuBarItemMask)
+	//				break;
+	//		}
+	//	}
+	//}
 
-	for (int n = 0; n < maxWindows; n++)
+	if (menuBarItemMask)
 	{
-		if (drawOrder[n] < maxWindows)
-		{
-			Window& win = windows[drawOrder[n]];
-			if (win.type != WindowType::Closed && win.menuItemMask != 0)
-			{
-				return win.menuItemMask | specialMenuItems;
-			}
-		}
+		menuBarItemMask |= Menu_Special_Restart | Menu_Special_CloseAll;
 	}
 
-	return 0;
+	return menuBarItemMask;
 }
 
 bool WindowManager::ShowingDialog()

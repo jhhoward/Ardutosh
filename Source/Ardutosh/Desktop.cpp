@@ -7,6 +7,7 @@
 #include "Generated/Sprites.h"
 #include "Apps.h"
 #include "MenuBar.h"
+#include "VirtualKeyboard.h"
 
 void* finderHandle = (void*)1;
 void* trashFinderHandle = (void*)2;
@@ -20,7 +21,10 @@ void Desktop::Handler(Window* window, SystemEvent event)
 	constexpr int itemsX = DISPLAY_WIDTH - itemWidth - padding;
 	constexpr int itemsY = MenuBar::height + padding;
 
-	window->menuItemMask = Menu_File_Close;
+	if (window->MenuItem(Menu_File_Close))
+	{
+
+	}
 
 	if (window->Item(arduboyIcon, FlashString("Arduboy"), itemsX, itemsY))
 	{
@@ -52,11 +56,23 @@ void Desktop::Handler(Window* window, SystemEvent event)
 			}
 		}
 	}
+
+	/*if (event == SystemEvent::KeyPressed)
+	{
+		static bool enabled = false;
+		if (!enabled)
+		{
+			enabled = true;
+			PlatformRemote::SetKeyboardEnabled(true);
+		}
+		PlatformRemote::KeyboardWrite(VirtualKeyboard::GetLastKeyPressed());
+	}*/
 }
 
 void Desktop::CreateDesktop()
 {
 	Window* desktop = WindowManager::Create(WindowType::Desktop, Desktop::Handler);
+	desktop->x = desktop->y = 0;
 }
 
 void Desktop::ShowSplash()

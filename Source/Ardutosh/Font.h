@@ -23,6 +23,9 @@ public:
 	static void DrawChar(char c, uint8_t colour);
 	static void DrawHexNibble(uint8_t val, uint8_t colour);
 
+	static void SetCursor(int16_t x, int16_t y) { cursorX = x; cursorY = y; }
+	static int16_t GetCursorX() { return cursorX; }
+	static int16_t GetCursorY() { return cursorY; }
 private:
 	static int16_t cursorX, cursorY;
 };

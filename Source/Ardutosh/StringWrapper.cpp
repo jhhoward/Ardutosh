@@ -76,6 +76,12 @@ int xString::NumLines(int maxCharactersPerLine) const
 	{
 		count++;
 		index = GetLineEndIndex(index, maxCharactersPerLine);
+
+		// If we end with a new line then count this as an extra line
+		if (index == length && (Read(index - 1) == '\n' || Read(index - 1) == '\r'))
+		{
+			count++;
+		}
 	}
 
 	return count;
@@ -108,7 +114,9 @@ int xString::GetLineEndIndex(int start, int maxCharactersPerLine) const
 	{
 		char c = Read(index);
 		if (c == '\n' || c == '\r')
+		{
 			return index + 1;
+		}
 
 		if (index - start >= maxCharactersPerLine)
 			return index;

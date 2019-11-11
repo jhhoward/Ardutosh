@@ -1,13 +1,31 @@
 #include <Arduboy2.h>
-#include <ArduboyTones.h>
+//#include <ArduboyTones.h>
 #include <EEPROM.h>
+#include <Keyboard.h>
+#include <Mouse.h>
+
+#define USE_GAMEPAD_REMOTE 0
+
+#if USE_GAMEPAD_REMOTE
+#include <Joystick.h>
+#endif
+
 #include "System.h"
 #include "Platform.h"
 #include "Defines.h"
 
 Arduboy2Base arduboy;
-ArduboyTones sound(arduboy.audio.enabled);
+//ArduboyTones sound(arduboy.audio.enabled);
 Sprites sprites;
+
+#if USE_GAMEPAD_REMOTE
+Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID,JOYSTICK_TYPE_GAMEPAD,
+  2, 0,                  // Button Count, Hat Switch Count
+  true, true, false,     // X and Y, but no Z Axis
+  false, false, false,   // No Rx, Ry, or Rz
+  false, false,          // No rudder or throttle
+  false, false, false);  // No accelerator, brake, or steering
+#endif
 
 uint8_t Platform::GetInput()
 {
@@ -43,7 +61,7 @@ uint8_t Platform::GetInput()
 
 void Platform::PlaySound(const uint16_t* audioPattern)
 {
-	sound.tones(audioPattern);
+//	sound.tones(audioPattern);
 }
 
 void Platform::SetLED(uint8_t r, uint8_t g, uint8_t b)
@@ -145,6 +163,11 @@ uint8_t PlatformStorage::GetByte(uint16_t address)
 	return EEPROM.read(address);
 }
 
+void PlatformStorage::SetByte(uint16_t address, uint8_t value)
+{
+	return EEPROM.update(address, value);
+}
+
 #define ADC_TEMP (_BV(REFS0) | _BV(REFS1) | _BV(MUX2) | _BV(MUX1) | _BV(MUX0))
 #define ADC_VOLTAGE (_BV(REFS0) | _BV(MUX4) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1))
 
@@ -184,6 +207,91 @@ void Platform::Reboot()
 	resetFunc();
 }
 
+bool remoteKeyboardEnabled = false;
+void PlatformRemote::SetKeyboardEnabled(bool enabled)
+{
+	if(enabled != remoteKeyboardEnabled)
+	{
+		if(enabled)
+		{
+			Keyboard.begin();
+		}
+		else
+		{
+			Keyboard.end();
+		}
+		remoteKeyboardEnabled = enabled;
+	}
+}
+bool PlatformRemote::IsKeyboardEnabled()
+{
+	return remoteKeyboardEnabled;
+}
+
+bool remoteMouseEnabled = false;
+void PlatformRemote::SetMouseEnabled(bool enabled)
+{
+	if(enabled)
+	{
+		Mouse.begin();
+	}
+	else
+	{
+		Mouse.end();
+	}
+	if(enabled != remoteMouseEnabled)
+	{
+		remoteMouseEnabled = enabled;
+	}
+}
+bool PlatformRemote::IsMouseEnabled()
+{
+	return remoteMouseEnabled;
+}
+
+void PlatformRemote::KeyboardWrite(uint8_t data)
+{
+	Keyboard.write(data);
+}
+
+void PlatformRemote::MouseMove(int dirX, int dirY)
+{
+	Mouse.move(dirX, dirY);
+}
+
+void PlatformRemote::MouseDown()
+{
+	Mouse.press(MOUSE_LEFT);
+}
+
+void PlatformRemote::MouseUp()
+{
+	Mouse.release(MOUSE_LEFT);
+}
+
+bool remoteGamepadEnabled = false;
+void PlatformRemote::SetGamepadEnabled(bool enabled)
+{
+#if USE_GAMEPAD_REMOTE
+	if(enabled != remoteGamepadEnabled)
+	{
+		if(enabled)
+		{
+			Joystick.begin();
+		}
+		else
+		{
+			Joystick.end();
+		}
+		remoteGamepadEnabled = enabled;
+	}
+#endif
+}
+bool PlatformRemote::IsGamepadEnabled()
+{
+	return remoteGamepadEnabled;
+}
+
 void setup()
 {
   arduboy.boot();
@@ -210,6 +318,28 @@ void loop()
   unsigned long timingSample = millis();
   tickAccum += (timingSample - lastTimingSample);
   lastTimingSample = timingSample;
+  
+#if USE_GAMEPAD_REMOTE
+  if(remoteGamepadEnabled)
+  {
+	Joystick.setButton(0, arduboy.pressed(A_BUTTON));
+	Joystick.setButton(1, arduboy.pressed(B_BUTTON));
+	
+	Joystick.setXAxisRange(-1, 1);
+	Joystick.setYAxisRange(-1, 1);
+	int dirX = 0, dirY = 0;
+	if(arduboy.pressed(LEFT_BUTTON))
+		dirX--;
+	if(arduboy.pressed(RIGHT_BUTTON))
+		dirX++;
+	if(arduboy.pressed(UP_BUTTON))
+		dirY--;
+	if(arduboy.pressed(DOWN_BUTTON))
+		dirY++;
+	Joystick.setXAxis(dirX);
+	Joystick.setYAxis(dirY);
+  }
+#endif
 	
 #if DEV_MODE
   if(arduboy.nextFrameDEV())

@@ -7,11 +7,11 @@
 #include "Input.h"
 #include "WindowManager.h"
 #include "MenuBar.h"
-#include "Keyboard.h"
+#include "VirtualKeyboard.h"
 
 #include "Generated/Sprites.inc.h"
 
-Mouse mouse;
+VirtualMouse mouse;
 bool System::screenDirty = true;
 System::StateData System::state;
 
@@ -56,7 +56,7 @@ void System::Tick()
 {
 	HandleEvent(SystemEvent::Tick);
 
-	if (!Keyboard::IsVisible())
+	if (!VirtualKeyboard::IsVisible())
 	{
 		mouse.Tick();
 	}
@@ -73,9 +73,11 @@ void System::Draw()
 {
 	if (!screenDirty)
 	{
-		Keyboard::Update();
+		VirtualKeyboard::Update(false);
 		return;
 	}
+
+	VirtualKeyboard::SetCursorScreenLocation(0, 0);
 
 	state.currentEvent = SystemEvent::Repaint;
 
@@ -89,22 +91,22 @@ void System::Draw()
 	//Font::DrawString("asdfghjkl", 0, DISPLAY_HEIGHT - 16, BLACK);
 	//Font::DrawString(" zxcvbnm", 0, DISPLAY_HEIGHT - 8, BLACK);
 
-	if (!Keyboard::IsVisible())
+	if (!VirtualKeyboard::IsVisible())
 	{
 		mouse.Draw();
 	}
-	Keyboard::Update();
 
 	state.currentEvent = SystemEvent::None;
-
 	screenDirty = false;
+
+	VirtualKeyboard::Update(true);
 }
 
 void System::DrawBG()
 {
 	uint8_t* ptr = Platform::GetScreenBuffer();
 
-	if (MenuBar::IsVisible())
+	/*if (MenuBar::IsVisible())
 	{
 		// Menu bar
 		*ptr++ = 0x7c;
@@ -116,7 +118,7 @@ void System::DrawBG()
 		*ptr++ = 0x7e;
 		*ptr++ = 0x7c;
 	}
-	else
+	else*/
 	{
 		*ptr++ = 0x54;
 		*ptr++ = 0xaa;

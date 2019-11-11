@@ -41,6 +41,7 @@ public:
 	//static void EnterState(State newState, WindowHandle window = WindowManager::invalidWindowHandle, uint8_t elementIndex = 0);
 	static void EnterState(State newState, const Element& stateElement = Element());
 	static void ExitState(State exitingState);
+	static void MarkEventHandled() { state.currentEvent = SystemEvent::EventHandled; }
 
 	static StateData state;
 

@@ -36,3 +36,5 @@ extern const uint8_t alphaIcon[];
 extern const uint8_t numbersIcon[];
 // Generated from Assets/return-icon.png
 extern const uint8_t returnIcon[];
+// Generated from Assets/remote-icon.png
+extern const uint8_t remoteIcon[];

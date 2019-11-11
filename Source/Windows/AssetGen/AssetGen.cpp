@@ -692,6 +692,7 @@ int main(int argc, char* argv[])
 	EncodeSprite2D(typeFile, dataFile, "Assets/AZ-icon.png", "alphaIcon");
 	EncodeSprite2D(typeFile, dataFile, "Assets/numbers-icon.png", "numbersIcon");
 	EncodeSprite2D(typeFile, dataFile, "Assets/return-icon.png", "returnIcon");
+	EncodeSprite2D(typeFile, dataFile, "Assets/remote-icon.png", "remoteIcon");
 
 	dataFile.close();
 	typeFile.close();

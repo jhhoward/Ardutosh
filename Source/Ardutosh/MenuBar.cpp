@@ -5,6 +5,7 @@
 #include "Input.h"
 #include "Platform.h"
 #include "System.h"
+#include "VirtualKeyboard.h"
 
 struct MenuItem
 {
@@ -115,9 +116,25 @@ constexpr int menuWidth = 52;
 const MenuItem* MenuBar::selectedItem = nullptr;
 void MenuBar::Draw()
 {
+	if (!IsVisible())
+		return;
+
 	uint16_t activeMask = WindowManager::GetMenuBarItemMask();
 
 	int menuX = itemStartX;
+	int menuRootY = 0;
+	int dummyX = 0;
+
+	VirtualKeyboard::ApplyScreenShift(dummyX, menuRootY);
+
+	Platform::FillRect(0, menuRootY, DISPLAY_WIDTH, MenuBar::height - 1, WHITE);
+	// Corners
+	Platform::DrawFastVLine(0, menuRootY, 2, BLACK);
+	Platform::DrawPixel(1, menuRootY, BLACK);
+	Platform::DrawFastVLine(DISPLAY_WIDTH - 1, menuRootY, 2, BLACK);
+	Platform::DrawPixel(DISPLAY_WIDTH - 2, menuRootY, BLACK);
+	// Outline
+	Platform::DrawFastHLine(0, menuRootY + MenuBar::height - 1, DISPLAY_WIDTH, BLACK);
 
 	for (const MenuItem* item = menuItems; !item->IsEnd(); ++item)
 	{
@@ -130,16 +147,16 @@ void MenuBar::Draw()
 
 				if (isSelected)
 				{
-					Platform::FillRect(menuX, 0, itemWidth, height, BLACK);
+					Platform::FillRect(menuX, menuRootY, itemWidth, height, BLACK);
 				}
 
-				Font::DrawString(item->GetTitle(), menuX + itemPadding, itemStartY, isSelected ? WHITE : BLACK);
+				Font::DrawString(item->GetTitle(), menuX + itemPadding, menuRootY + itemStartY, isSelected ? WHITE : BLACK);
 
 				if (isSelected)
 				{
 					int numChildItems = item->CountActiveItems(activeMask);
 					int menuHeight = itemVerticalSpacing * numChildItems + itemPadding;
-					int menuY = MenuBar::height;
+					int menuY = menuRootY + MenuBar::height;
 
 					Platform::FillRect(menuX, menuY, menuWidth, menuHeight, WHITE);
 					Platform::DrawRect(menuX, menuY, menuWidth, menuHeight, BLACK);
@@ -215,6 +232,10 @@ const MenuItem* MenuBar::GetItemUnderMouse()
 				if (mouse.x >= menuX && mouse.x < menuX + menuWidth && mouse.y > MenuBar::height && mouse.y < menuY + menuHeight)
 				{
 					int childIndex = (mouse.y - menuY) / itemVerticalSpacing;
+					if (childIndex >= numChildItems)
+					{
+						return item;
+					}
 
 					while (childIndex >= 0)
 					{

@@ -12,5 +12,7 @@ enum class SystemEvent : uint8_t
 	OpenWindow,
 	CloseWindow,
 	MenuItemClicked,
-	KeyPressed
+	KeyPressed,
+	GatherMenuItems,
+	EventHandled
 };

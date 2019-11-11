@@ -333,6 +333,15 @@ void Font::DrawStringWindowed(const xString& str, int16_t x, int16_t y, uint8_t 
 			if (cursorY + glyphHeight >= y + h)
 				break;
 		}
+		else
+		{
+			// If ends with a new line then move cursor to next line
+			if (str[length - 1] == '\n' || str[length - 1] == '\r')
+			{
+				cursorY += glyphHeight + 1;
+				cursorX = x;
+			}
+		}
 	}
 }
 

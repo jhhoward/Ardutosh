@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-struct Mouse
+struct VirtualMouse
 {
 	union
 	{
@@ -28,6 +28,8 @@ struct Mouse
 	uint8_t lastInput;
 	int16_t deltaX, deltaY;
 
+	uint8_t remoteMouseSpeed = 1;
+
 	void Tick();
 	void RestoreBackgroundPixels();
 	void Draw();
@@ -37,4 +39,4 @@ struct Mouse
 	uint8_t backgroundPixels[24];
 };
 
-extern Mouse mouse;
+extern VirtualMouse mouse;

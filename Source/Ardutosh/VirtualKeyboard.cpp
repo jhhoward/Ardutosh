@@ -1,4 +1,4 @@
-#include "Keyboard.h"
+#include "VirtualKeyboard.h"
 #include "Platform.h"
 #include "Font.h"
 #include "System.h"
@@ -14,6 +14,11 @@ const char keyboardLayout[] PROGMEM =
 	"\azxcvbnm\b\n"
 	"\v,     .\r";
 
+const char keyboardHexLayout[] PROGMEM =
+	"789AB\n"
+	"456CD\n"
+	"123EF\n"
+	"0";
 const char keyboardLayoutUpper[] PROGMEM =
 	"QWERTYUIOP\n"
 	"ASDFGHJKL\n"
@@ -26,13 +31,17 @@ const char keyboardLayoutSym[] PROGMEM =
 	"[];'#-+=_\b\n"
 	"\v\\|    /\r";
 
-const char* Keyboard::currentLayout = keyboardLayout;
-uint8_t Keyboard::selectedKeyX;
-uint8_t Keyboard::selectedKeyY;
-bool Keyboard::keyboardVisible;
-char Keyboard::lastKeyPressed;
+const char* VirtualKeyboard::currentLayout = keyboardLayout;
+uint8_t VirtualKeyboard::selectedKeyX;
+uint8_t VirtualKeyboard::selectedKeyY;
+bool VirtualKeyboard::keyboardVisible;
+char VirtualKeyboard::lastKeyPressed;
+int VirtualKeyboard::cursorScreenLocationX;
+int VirtualKeyboard::cursorScreenLocationY;
+int VirtualKeyboard::screenShiftX;
+int VirtualKeyboard::screenShiftY;
 
-int Keyboard::CountKeysOnRow(const char* c)
+int VirtualKeyboard::CountKeysOnRow(const char* c)
 {
 	int keys = 0;
 	while (pgm_read_byte(c))
@@ -45,7 +54,7 @@ int Keyboard::CountKeysOnRow(const char* c)
 	return keys;
 }
 
-int Keyboard::GetSpacebarWidth(const char* c)
+int VirtualKeyboard::GetSpacebarWidth(const char* c)
 {
 	int count = 0;
 
@@ -57,7 +66,7 @@ int Keyboard::GetSpacebarWidth(const char* c)
 	return count;
 }
 
-void Keyboard::DrawSelectionBox(int x, int y, int w, int h)
+void VirtualKeyboard::DrawSelectionBox(int x, int y, int w, int h)
 {
 	static int animation = 0;
 	animation++;
@@ -66,44 +75,70 @@ void Keyboard::DrawSelectionBox(int x, int y, int w, int h)
 	for (int n = movement; n < w; n += 2)
 	{
 		Platform::DrawPixel(x + n, y, BLACK);
-		Platform::DrawPixel(x + w - n, y + h, BLACK);
+		Platform::DrawPixel(x + w - n - 1, y + h - 1, BLACK);
 	}
 	for(int n = movement; n < h; n += 2)
 	{
-		Platform::DrawPixel(x + w, y + n, BLACK);
-		Platform::DrawPixel(x, y + h - n, BLACK);
+		Platform::DrawPixel(x + w - 1, y + n, BLACK);
+		Platform::DrawPixel(x, y + h - n - 1, BLACK);
 	}
 }
 
-void Keyboard::Update()
+void VirtualKeyboard::Show()
+{
+	currentLayout = keyboardLayout;
+	keyboardVisible = true;
+	System::MarkScreenDirty();
+}
+
+void VirtualKeyboard::SetHexInputLayout()
+{
+	currentLayout = keyboardHexLayout;
+}
+
+void VirtualKeyboard::Update(bool fullRefresh)
 {
 	static uint8_t lastInput = Platform::GetInput();
 	uint8_t input = Platform::GetInput();
 
 	if ((input & INPUT_A) && !(lastInput & INPUT_A))
 	{
-		// Toggle keyboard
-		keyboardVisible = !keyboardVisible;
-
-		if (keyboardVisible)
+		if (PlatformRemote::IsGamepadEnabled())
 		{
-			currentLayout = keyboardLayout;
+
 		}
-		System::MarkScreenDirty();
+		else if (PlatformRemote::IsMouseEnabled())
+		{
+			PlatformRemote::SetMouseEnabled(false);
+			System::MarkScreenDirty();
+		}
+		else
+		{
+			// Toggle keyboard
+			keyboardVisible = !keyboardVisible;
+
+			if (keyboardVisible)
+			{
+				Show();
+			}
+			System::MarkScreenDirty();
+			lastInput = input;
+			return;
+		}
 	}
 
 	if (keyboardVisible)
 	{
-		constexpr int columns = 10;
+		const int columns = CountKeysOnRow(currentLayout);
 		constexpr int rows = 4;
 		constexpr int keySpacing = 8;
 		constexpr int paddingX = 2;
 		constexpr int paddingY = 1;
-		constexpr int keyboardWidth = columns * keySpacing + paddingX * 2;
+		int keyboardWidth = columns * keySpacing + paddingX * 2;
 		constexpr int keyboardHeight = rows * keySpacing + paddingY * 2;
 
-		constexpr int keyboardX = DISPLAY_WIDTH / 2 - keyboardWidth / 2;
-		constexpr int keyboardY = DISPLAY_HEIGHT - keyboardHeight;
+		int keyboardX = DISPLAY_WIDTH / 2 - keyboardWidth / 2;
+		constexpr int keyboardY = DISPLAY_HEIGHT - keyboardHeight + paddingY * 2;
 
 		Platform::FillRect(keyboardX - paddingX, keyboardY - paddingY, keyboardWidth, keyboardHeight, WHITE);
 		Platform::DrawRect(keyboardX - paddingX, keyboardY - paddingY, keyboardWidth, keyboardHeight, BLACK);
@@ -141,6 +176,12 @@ void Keyboard::Update()
 			{
 				selectedKeyX = keysOnRow - 1;
 			}
+
+			if (selectedKeyX == keyX && selectedKeyY == keyY && (input & INPUT_B))
+			{
+				Platform::FillRect(outX, outY, keySpacing, keySpacing, BLACK);
+			}
+
 			switch (c)
 			{
 			case ' ':
@@ -163,7 +204,14 @@ void Keyboard::Update()
 						selectedKeyX = keyX + spacebarWidth;
 					}
 
-					DrawSelectionBox(outX, outY, spacebarWidth * keySpacing, keySpacing);
+					if (input & INPUT_B)
+					{
+						Platform::FillRect(outX, outY, spacebarWidth * keySpacing, keySpacing, BLACK);
+					}
+					else
+					{
+						DrawSelectionBox(outX, outY, spacebarWidth * keySpacing, keySpacing);
+					}
 					selectedChar = ' ';
 				}
 				else
@@ -199,7 +247,14 @@ void Keyboard::Update()
 				break;
 			default:
 				//Platform::FillRect(outX, outY, keySpacing, keySpacing, WHITE);
-				Font::DrawChar(c, outX + paddingX, outY + paddingY, BLACK);
+				if (selectedKeyX == keyX && selectedKeyY == keyY && (input & INPUT_B))
+				{
+					Font::DrawChar(c, outX + paddingX, outY + paddingY, WHITE);
+				}
+				else
+				{
+					Font::DrawChar(c, outX + paddingX, outY + paddingY, BLACK);
+				}
 				break;
 			}
 
@@ -213,7 +268,7 @@ void Keyboard::Update()
 			keyX++;
 		}
 
-		if ((input & INPUT_B) && !(lastInput & INPUT_B))
+		if (!(input & INPUT_B) && (lastInput & INPUT_B))
 		{
 			switch (selectedChar)
 			{
@@ -242,4 +297,52 @@ void Keyboard::Update()
 	}
 
 	lastInput = input;
+
+	if (fullRefresh)
+	{
+		int lastScreenShiftX = screenShiftX;
+		int lastScreenShiftY = screenShiftY;
+		screenShiftX = 0;
+		screenShiftY = 0;
+
+		constexpr int obscuredSize = 39;
+		constexpr int lastVisibleY = DISPLAY_HEIGHT - obscuredSize;
+		constexpr int lastVisibleX = DISPLAY_WIDTH - 8;
+
+		if (cursorScreenLocationY + lastScreenShiftY > lastVisibleY)
+		{
+			screenShiftY = (cursorScreenLocationY + lastScreenShiftY) - lastVisibleY;
+		}
+		if (cursorScreenLocationX + lastScreenShiftX < 0)
+		{
+			screenShiftX = (cursorScreenLocationX + lastScreenShiftX);
+		}
+		if (cursorScreenLocationX + lastScreenShiftX > lastVisibleX)
+		{
+			screenShiftX = (cursorScreenLocationX + lastScreenShiftX) - lastVisibleX;
+		}
+
+		if (keyboardVisible && (lastScreenShiftY != screenShiftY || lastScreenShiftX != screenShiftX))
+		{
+			System::MarkScreenDirty();
+		}
+	}
+}
+
+void VirtualKeyboard::ApplyScreenShift(int& x, int&y)
+{
+	if (keyboardVisible)
+	{
+		x -= screenShiftX;
+		y -= screenShiftY;
+	}
+}
+
+void VirtualKeyboard::UnapplyScreenShift(int& x, int&y)
+{
+	if (keyboardVisible)
+	{
+		x += screenShiftX;
+		y += screenShiftY;
+	}
 }

@@ -7,6 +7,7 @@
 #include "System.h"
 #include "Platform.h"
 #include "lodepng.h"
+#include <conio.h>
 
 #define ZOOM_SCALE 1
 #define TONES_END 0x8000
@@ -337,11 +338,11 @@ void Platform::FillRect(int16_t x1, int16_t y1, uint8_t w, uint8_t h, uint8_t co
 	if (x1 < 0)
 		x1 = 0;
 	if (x2 >= DISPLAY_WIDTH)
-		x2 = DISPLAY_WIDTH - 1;
+		x2 = DISPLAY_WIDTH;
 	if (y1 < 0)
 		y1 = 0;
 	if (y2 >= DISPLAY_HEIGHT)
-		y2 = DISPLAY_HEIGHT - 1;
+		y2 = DISPLAY_HEIGHT;
 
 	for (int y = y1; y < y2; y++)
 	{
@@ -402,8 +403,10 @@ void Platform::DrawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t 
 	}
 }
 
+//char testCommString[] = "test\n";
 char testCommString[] = "This is some test data to test how the terminal processes and displays text.\nHere is another line of stuff.\nAnd another line.\nMore message to stress test the system and to ensure that auto scrolling is working correctly etc.";
 unsigned int testCommPos = 0;
+bool useConsoleInput = true;
 
 void PlatformComm::SetBaud(uint32_t rate)
 {
@@ -412,6 +415,10 @@ void PlatformComm::SetBaud(uint32_t rate)
 
 bool PlatformComm::IsAvailable()
 {
+	if (useConsoleInput)
+	{
+		return _kbhit() != 0;
+	}
 	return testCommPos < strlen(testCommString);
 }
 
@@ -422,6 +429,11 @@ void PlatformComm::Write(uint8_t data)
 
 uint8_t PlatformComm::Read()
 {
+	if (useConsoleInput)
+	{
+		return _getch();
+	}
+
 	if (testCommPos < strlen(testCommString))
 	{
 		return testCommString[testCommPos++];
@@ -438,6 +450,14 @@ uint8_t PlatformStorage::GetByte(uint16_t address)
 	return 0;
 }
 
+void PlatformStorage::SetByte(uint16_t address, uint8_t value)
+{
+	if (address < strlen(testCommString))
+	{
+		testCommString[address] = value;
+	}
+}
+
 uint16_t Platform::GetBatteryVoltage()
 {
 	return 4299 - (rand() % 100);
@@ -446,6 +466,53 @@ uint16_t Platform::GetBatteryVoltage()
 int16_t Platform::GetTemperature()
 {
 	return 20 + (rand() % 5);
+}
+
+bool remoteKeyboardEnabled = false;
+void PlatformRemote::SetKeyboardEnabled(bool enabled)
+{
+	remoteKeyboardEnabled = enabled;
+}
+bool PlatformRemote::IsKeyboardEnabled()
+{
+	return remoteKeyboardEnabled;
+}
+
+bool remoteMouseEnabled = false;
+void PlatformRemote::SetMouseEnabled(bool enabled)
+{
+	remoteMouseEnabled = enabled;
+}
+bool PlatformRemote::IsMouseEnabled()
+{
+	return remoteMouseEnabled;
+}
+
+
+void PlatformRemote::KeyboardWrite(uint8_t data)
+{
+}
+
+void PlatformRemote::MouseMove(int dirX, int dirY)
+{
+}
+
+void PlatformRemote::MouseDown()
+{
+}
+
+void PlatformRemote::MouseUp()
+{
+}
+
+bool remoteGamepadEnabled = false;
+void PlatformRemote::SetGamepadEnabled(bool enabled)
+{
+	remoteGamepadEnabled = enabled;
+}
+bool PlatformRemote::IsGamepadEnabled()
+{
+	return remoteGamepadEnabled;
 }
 
 void Platform::Reboot()

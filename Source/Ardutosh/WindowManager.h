@@ -34,7 +34,12 @@ public:
 	static uint8_t currentElementIndex;
 
 private:
+	friend class Window;
+
 	static void DrawAnimations();
 	static int GetDrawPosition(WindowHandle window);
+
+	static uint16_t menuBarItemMask;
+
 };
 

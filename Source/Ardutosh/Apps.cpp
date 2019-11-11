@@ -4,10 +4,38 @@
 #include "Platform.h"
 #include "System.h"
 #include "MenuBar.h"
-#include "Keyboard.h"
+#include "VirtualKeyboard.h"
+#include "Input.h"
 #include "Generated/Sprites.h"
 
 const char ReadmeContents[] PROGMEM = "Welcome to the Arduboy desktop environment!\nWritten by James Howard for the Arduboy game jam 4 where the theme was 'not a game'.\nThe graphical style is based on the classic Macintosh interface.";
+
+#define USE_GAMEPAD_REMOTE 0
+
+struct GridView
+{
+	GridView(Window* inWindow, int inStartX = 14, int inStartY = 10, int inSpacingX = 30, int inSpacingY = 22) 
+		: x(inStartX), y(inStartY), window(inWindow), startX(inStartX), startY(inStartY), spacingX(inSpacingX), spacingY(inSpacingY)
+	{
+	}
+
+	int x, y;
+
+	void Next()
+	{
+		x += spacingX;
+		if (x >= window->w)
+		{
+			x = startX;
+			y += spacingY;
+		}
+	}
+
+private:
+	Window* window;
+	int startX, startY;
+	int spacingX, spacingY;
+};
 
 Window* Apps::OpenTerminalApp()
 {
@@ -77,7 +105,7 @@ void Apps::TerminalApp(Window* window, SystemEvent eventType)
 	constexpr int maxVisibleLines = 6;
 	constexpr int bufferSize = 256;
 	static char buffer[bufferSize];
-	static int bufferPos = 0;
+	static int bufferPos = 0; 
 	static uint16_t scrollPosition = 0;
 	xString str(buffer);
 	int textAreaWidth = window->w - 15;
@@ -87,7 +115,23 @@ void Apps::TerminalApp(Window* window, SystemEvent eventType)
 	int numLinesInBuffer = str.NumLines(numColumns);
 	uint16_t maxScroll = 0;
 
-	window->menuItemMask = Menu_File_Close | Menu_File_DumpEEPROM | Menu_Edit_Clear | Menu_Edit_SetBaud;
+	if (window->MenuItem(Menu_Edit_Clear))
+	{
+		for (int n = 0; n < bufferSize; n++)
+			buffer[n] = '\0';
+		bufferPos = 0;
+	}
+	if (window->MenuItem(Menu_File_DumpEEPROM))
+	{
+		for (uint16_t address = 0; address < 1024; address++)
+		{
+			PlatformComm::Write(PlatformStorage::GetByte(address));
+		}
+	}
+	if (window->MenuItem(Menu_Edit_SetBaud))
+	{
+		WindowManager::Create(WindowType::DialogBox, SetBaudRateDialog);
+	}
 
 	if (numRows < numLinesInBuffer)
 	{
@@ -96,41 +140,24 @@ void Apps::TerminalApp(Window* window, SystemEvent eventType)
 
 	window->VerticalScrollBar(scrollPosition, maxScroll);
 
-	if (eventType == SystemEvent::MenuItemClicked)
+	if (eventType == SystemEvent::KeyPressed)
 	{
-		switch (MenuBar::GetSelectedMenuItem())
-		{
-		case Menu_Edit_Clear:
-			for (int n = 0; n < bufferSize; n++)
-				buffer[n] = '\0';
-			bufferPos = 0;
-			break;
-		case Menu_File_Close:
-			WindowManager::Destroy(window);
-			break;
-		case Menu_File_DumpEEPROM:
-			for (uint16_t address = 0; address < 1024; address++)
-			{
-				PlatformComm::Write(PlatformStorage::GetByte(address));
-			}
-			break;
-		case Menu_Edit_SetBaud:
-			WindowManager::Create(WindowType::DialogBox, SetBaudRateDialog);
-			break;
-		}
-	}
-	else if (eventType == SystemEvent::KeyPressed)
-	{
-		PlatformComm::Write(Keyboard::GetLastKeyPressed());
+		PlatformComm::Write(VirtualKeyboard::GetLastKeyPressed());
 	}
 	else if (eventType == SystemEvent::Repaint)
 	{
 		Font::DrawStringWindowed(str.SubstringAtLine(scrollPosition, numColumns), window->x + 2, window->y + 11, window->w - 15, window->h - 12, BLACK);
+		if (window->IsFocused())
+		{
+			VirtualKeyboard::SetCursorScreenLocation(Font::GetCursorX(), Font::GetCursorY());
+		}
 		Font::DrawCaret(BLACK);
 	}
 	else if (eventType == SystemEvent::Tick)
 	{
-		if (PlatformComm::IsAvailable())
+		bool receivedData = false;
+
+		while (PlatformComm::IsAvailable())
 		{
 			char input = PlatformComm::Read();
 
@@ -176,18 +203,26 @@ void Apps::TerminalApp(Window* window, SystemEvent eventType)
 				}
 				buffer[bufferPos++] = input;
 
-				for(int n = bufferPos; n < bufferSize; n++)
+				for (int n = bufferPos; n < bufferSize; n++)
 					buffer[n] = '\0';
 			}
 
+			receivedData = true;
+		}
+
+		if (receivedData)
+		{
+			// auto scroll if we are at the bottom
 			bool atBottom = maxScroll == 0 || scrollPosition == maxScroll;
 			if (atBottom)
 			{
-				int newNumLinesInBuffer = str.NumLines(numColumns);
-				maxScroll = newNumLinesInBuffer - numRows;
+				numLinesInBuffer = str.NumLines(numColumns);
+				if (numRows < numLinesInBuffer)
+				{
+					maxScroll = numLinesInBuffer - numRows;
+				}
 				scrollPosition = maxScroll;
 			}
-
 			System::MarkScreenDirty();
 		}
 	}
@@ -207,9 +242,9 @@ Window* Apps::OpenFinderApp()
 	if (win)
 	{
 		win->title = FlashString("Arduboy");
-		win->x = 1;
+		win->x = 0;
 		win->y = 8;
-		win->w = 94;
+		win->w = 128;
 		win->h = 54;
 		return win;
 	}
@@ -217,79 +252,49 @@ Window* Apps::OpenFinderApp()
 	return nullptr;
 }
 
+typedef Window*(*FinderItemHandler)();
+
+struct FinderItem
+{
+	const uint8_t* icon;
+	const char label[9];
+	FinderItemHandler handler;
+
+	const uint8_t* GetIcon() const { return (uint8_t*)pgm_read_ptr(&icon); }
+	FinderItemHandler GetHandler() const { return (FinderItemHandler) pgm_read_ptr(&handler);  }
+};
+
+const static FinderItem finderItems[] PROGMEM =
+{
+	{ terminalIcon,		"Terminal",		Apps::OpenTerminalApp },
+	{ eepromIcon,		"EEPROM",		Apps::OpenEEPROMInspectorApp },
+	{ batteryIcon,		"Battery",		Apps::OpenBatteryApp },
+	{ temperatureIcon,	"Thermal",		Apps::OpenTemperatureApp },
+	{ ledIcon,			"LED",			Apps::OpenLEDApp },
+	{ remoteIcon,		"Remote",		Apps::OpenRemoteApp },
+	{ documentIcon,		"Readme",		Apps::OpenReadme },
+};
+
 void Apps::FinderApp(Window* window, SystemEvent eventType)
 {
-	const int itemsStartX = window->x + 14;
-	const int itemsStartY = window->y + 10;
-	constexpr int itemSpacingX = 30;
-	constexpr int itemSpacingY = 22;
-	int itemX = itemsStartX;
-	int itemY = itemsStartY;
+	GridView grid(window);
 
-	window->menuItemMask = Menu_File_Close;
-	if (eventType == SystemEvent::MenuItemClicked)
+	for(const FinderItem& item : finderItems)
 	{
-		switch (MenuBar::GetSelectedMenuItem())
+		if (window->Item(item.GetIcon(), xString(item.label, xString::Type::Flash), grid.x, grid.y))
 		{
-		case Menu_File_Close:
-			WindowManager::Destroy(window);
-			break;
+			if (Window* win = item.GetHandler()())
+			{
+				win->OpenWithAnimation(grid.x + 5, grid.y + 5);
+			}
 		}
+		grid.Next();
 	}
+}
 
-	if (window->Item(terminalIcon, FlashString("Terminal"), itemX, itemY))
-	{
-		if (Window* win = OpenTerminalApp())
-		{
-			win->OpenWithAnimation(itemX + 5, itemY + 5);
-		}
-	}
-
-	itemX += itemSpacingX;
-	if (window->Item(eepromIcon, FlashString("EEPROM"), itemX, itemY))
-	{
-		if (Window* win = OpenEEPROMInspectorApp())
-		{
-			win->OpenWithAnimation(itemX + 5, itemY + 5);
-		}
-	}
-
-	itemX += itemSpacingX;
-	if (window->Item(batteryIcon, FlashString("Battery"), itemX, itemY))
-	{
-		if (Window* win = OpenBatteryApp())
-		{
-			win->OpenWithAnimation(itemX + 5, itemY + 5);
-		}
-	}
-
-	itemX = itemsStartX;
-	itemY += itemSpacingY;
-	if (window->Item(temperatureIcon, FlashString("Thermal"), itemX, itemY))
-	{
-		if (Window* win = OpenTemperatureApp())
-		{
-			win->OpenWithAnimation(itemX + 5, itemY + 5);
-		}
-	}
-
-	itemX += itemSpacingX;
-	if (window->Item(ledIcon, FlashString("LED"), itemX, itemY))
-	{
-		if (Window* win = OpenLEDApp())
-		{
-			win->OpenWithAnimation(itemX + 5, itemY + 5);
-		}
-	}
-
-	itemX += itemSpacingX;
-	if (window->Item(documentIcon, FlashString("Readme"), itemX, itemY))
-	{
-		if (Window* win = OpenTextReader("Readme", ReadmeContents))
-		{
-			win->OpenWithAnimation(itemX + 5, itemY + 5);
-		}
-	}
+Window* Apps::OpenReadme()
+{
+	return OpenTextReader(FlashString("Readme"), ReadmeContents);
 }
 
 Window* Apps::OpenTextReader(const xString& title, const xString& contents)
@@ -338,17 +343,6 @@ void Apps::TextReaderApp(Window* window, SystemEvent eventType)
 	{
 		Font::DrawStringWindowed(str.SubstringAtLine(currentScroll, numColumns), window->x + 2, window->y + 11, textAreaWidth, textAreaHeight, BLACK);
 	}
-
-	window->menuItemMask = Menu_File_Close;
-	if (eventType == SystemEvent::MenuItemClicked)
-	{
-		switch (MenuBar::GetSelectedMenuItem())
-		{
-		case Menu_File_Close:
-			WindowManager::Destroy(window);
-			break;
-		}
-	}
 }
 
 Window* Apps::OpenEEPROMInspectorApp()
@@ -384,18 +378,14 @@ void Apps::EEPROMInspectorApp(Window* window, SystemEvent eventType)
 	constexpr uint16_t maxAddress = 1024;
 	constexpr uint16_t maxScrollLocation = (maxAddress - visibleLines * columnsPerLine) / columnsPerLine;
 	int outY = window->y + 10;
+	static uint16_t cursorLocation = -1;
+	bool cursorOverLowNibble = (cursorLocation & 1) != 0;
 
 	window->VerticalScrollBar(scrollLocation, maxScrollLocation);
 
-	window->menuItemMask = Menu_File_Close;
-	if (eventType == SystemEvent::MenuItemClicked)
+	if (window->IsFocused())
 	{
-		switch (MenuBar::GetSelectedMenuItem())
-		{
-		case Menu_File_Close:
-			WindowManager::Destroy(window);
-			break;
-		}
+		VirtualKeyboard::SetHexInputLayout();
 	}
 
 	if (eventType == SystemEvent::Repaint)
@@ -410,8 +400,32 @@ void Apps::EEPROMInspectorApp(Window* window, SystemEvent eventType)
 
 			for (int i = 0; i < 8; i++)
 			{
+				bool cursorOverAddress = (cursorLocation >> 1) == address;
+
 				uint8_t val = PlatformStorage::GetByte(address++);
-				Font::DrawHexByte(val, outX, outY, BLACK);
+
+				Font::SetCursor(outX, outY);
+
+				if (cursorOverAddress)
+				{
+					if (cursorOverLowNibble)
+					{
+						Platform::FillRect(outX + Font::glyphWidth, outY - 1, Font::glyphWidth, Font::glyphHeight + 1, BLACK);
+					}
+					else
+					{
+						Platform::FillRect(outX - 1, outY - 1, Font::glyphWidth, Font::glyphHeight + 1, BLACK);
+					}
+
+					VirtualKeyboard::SetCursorScreenLocation(outX, outY);
+				}
+				Font::DrawHexNibble(val >> 4, cursorOverAddress && !cursorOverLowNibble ? WHITE : BLACK);
+				Font::DrawHexNibble(val, cursorOverAddress && cursorOverLowNibble ? WHITE : BLACK);
+
+
+//				Font::DrawHexByte(val, outX, outY, BLACK);			
+
+
 				outX += Font::glyphWidth * 3;
 			}
 
@@ -421,6 +435,80 @@ void Apps::EEPROMInspectorApp(Window* window, SystemEvent eventType)
 		Platform::DrawFastVLine(window->x + 20, window->y + 9, window->h - 9, BLACK);
 
 //		Font::DrawStringWindowed(xString((const char*)window->data, xString::Type::Flash), window->x + 2, window->y + 11, window->w - 4, window->h - 12, BLACK);
+	}
+	if (eventType == SystemEvent::MouseDown)
+	{
+		int clickedX = mouse.x - window->x;
+		int clickedY = mouse.y - window->y;
+		constexpr int columnLeft = Font::glyphWidth * 5;
+		constexpr int columnTop = 10;
+		constexpr int columnSpacing = Font::glyphWidth * 3;
+		constexpr int rowSpacing = Font::glyphHeight + 1;
+
+		if (clickedX > columnLeft && clickedX < columnLeft + columnsPerLine * columnSpacing && clickedY >= columnTop && clickedY < columnTop + rowSpacing * visibleLines)
+		{
+			int column = (clickedX - columnLeft) / columnSpacing;
+			int row = (clickedY - columnTop) / rowSpacing;
+			
+			int selectedColumnX = column * columnSpacing + columnLeft;
+			bool selectedLowerNibble = clickedX > selectedColumnX + columnSpacing / 2;
+
+			uint16_t address = scrollLocation * columnsPerLine + (row * columnsPerLine) + column;
+			cursorLocation = (address * 2) + (selectedLowerNibble ? 1 : 0);
+			System::MarkScreenDirty();
+		}
+	}
+	else if (eventType == SystemEvent::KeyPressed)
+	{
+		char c = VirtualKeyboard::GetLastKeyPressed();
+		bool validInput = false;
+		uint8_t inputValue = 0;
+		if (c >= '0' && c <= '9')
+		{
+			inputValue = c - '0';
+			validInput = true;
+		}
+		else if (c >= 'a' && c <= 'f')
+		{
+			inputValue = c - 'a' + 0xa;
+			validInput = true;
+		}
+		else if (c >= 'A' && c <= 'F')
+		{
+			inputValue = c - 'A' + 0xa;
+			validInput = true;
+		}
+
+		if (validInput)
+		{
+			uint8_t newValue = PlatformStorage::GetByte(cursorLocation >> 1);
+
+			if (cursorOverLowNibble)
+			{
+				newValue = (newValue & 0xf0) | inputValue;
+			}
+			else
+			{
+				newValue = (newValue & 0xf) | (inputValue << 4);
+			}
+
+			PlatformStorage::SetByte(cursorLocation >> 1, newValue);
+
+			if (cursorLocation < maxAddress * 2)
+			{
+				cursorLocation++;
+
+				while ((cursorLocation >> 1) >= (scrollLocation + visibleLines) * columnsPerLine)
+				{
+					scrollLocation++;
+				}
+				while ((cursorLocation >> 1) < scrollLocation * columnsPerLine)
+				{
+					scrollLocation--;
+				}
+			}
+			System::MarkScreenDirty();
+		}
 	}
 }
 
@@ -455,6 +543,8 @@ void Apps::BatteryApp(Window* window, SystemEvent eventType)
 	static uint8_t timer = 0;
 	constexpr int bufferSize = 16;
 	static uint16_t buffer[bufferSize];
+	constexpr uint16_t minVal = 200;
+	constexpr uint16_t maxVal = 500;
 
 	if (eventType == SystemEvent::Repaint)
 	{
@@ -462,8 +552,6 @@ void Apps::BatteryApp(Window* window, SystemEvent eventType)
 		int graphY = window->y + 10;
 		int graphW = window->w - 13;
 		int graphH = window->h - 21;
-		constexpr uint16_t minVal = 200;
-		constexpr uint16_t maxVal = 500;
 		constexpr uint16_t range = maxVal - minVal;
 
 		Platform::DrawRect(graphX, graphY, graphW + 1, graphH + 1, BLACK);
@@ -511,6 +599,10 @@ void Apps::BatteryApp(Window* window, SystemEvent eventType)
 			{
 				buffer[n] = buffer[n + 1];
 			}
+			if (voltage < minVal * 10)
+				voltage = minVal * 10;
+			if (voltage > maxVal * 10)
+				voltage = maxVal * 10;
 			buffer[bufferSize - 1] = voltage;
 
 			timer = refreshRate;
@@ -519,19 +611,10 @@ void Apps::BatteryApp(Window* window, SystemEvent eventType)
 		else timer--;
 	}
 
-	window->menuItemMask = Menu_File_Close | Menu_Edit_Clear;
-	if (eventType == SystemEvent::MenuItemClicked)
+	if (window->MenuItem(Menu_Edit_Clear))
 	{
-		switch (MenuBar::GetSelectedMenuItem())
-		{
-		case Menu_File_Close:
-			WindowManager::Destroy(window);
-			break;
-		case Menu_Edit_Clear:
-			for (int n = 0; n < bufferSize; n++)
-				buffer[n] = 0;
-			break;
-		}
+		for (int n = 0; n < bufferSize; n++)
+			buffer[n] = 0;
 	}
 }
 
@@ -565,6 +648,8 @@ void Apps::TemperatureApp(Window* window, SystemEvent eventType)
 	static uint8_t timer = 0;
 	constexpr int bufferSize = 16;
 	static int16_t buffer[bufferSize];
+	constexpr int16_t minVal = 0;
+	constexpr int16_t maxVal = 50;
 
 	if (eventType == SystemEvent::Repaint)
 	{
@@ -572,8 +657,6 @@ void Apps::TemperatureApp(Window* window, SystemEvent eventType)
 		int graphY = window->y + 10;
 		int graphW = window->w - 13;
 		int graphH = window->h - 21;
-		constexpr int16_t minVal = 0;
-		constexpr int16_t maxVal = 50;
 		constexpr int16_t range = maxVal - minVal;
 
 		Platform::DrawRect(graphX, graphY, graphW + 1, graphH + 1, BLACK);
@@ -617,7 +700,12 @@ void Apps::TemperatureApp(Window* window, SystemEvent eventType)
 			{
 				buffer[n] = buffer[n + 1];
 			}
-			buffer[bufferSize - 1] = Platform::GetTemperature();
+			int16_t sample = Platform::GetTemperature();
+			if (sample < minVal)
+				sample = minVal;
+			if (sample > maxVal)
+				sample = maxVal;
+			buffer[bufferSize - 1] = sample;
 
 			timer = refreshRate;
 			System::MarkScreenDirty();
@@ -625,19 +713,10 @@ void Apps::TemperatureApp(Window* window, SystemEvent eventType)
 		else timer--;
 	}
 
-	window->menuItemMask = Menu_File_Close | Menu_Edit_Clear;
-	if (eventType == SystemEvent::MenuItemClicked)
+	if (window->MenuItem(Menu_Edit_Clear))
 	{
-		switch (MenuBar::GetSelectedMenuItem())
-		{
-		case Menu_File_Close:
-			WindowManager::Destroy(window);
-			break;
-		case Menu_Edit_Clear:
-			for (int n = 0; n < bufferSize; n++)
-				buffer[n] = 0;
-			break;
-		}
+		for (int n = 0; n < bufferSize; n++)
+			buffer[n] = 0;
 	}
 }
 
@@ -698,15 +777,117 @@ void Apps::LEDApp(Window* window, SystemEvent eventType)
 	{
 		Platform::SetLED(red, green, blue);
 	}
+}
 
-	window->menuItemMask = Menu_File_Close;
-	if (eventType == SystemEvent::MenuItemClicked)
+Window* Apps::OpenRemoteApp()
+{
+	Window* win = WindowManager::FindByHandler(RemoteApp);
+
+	if (win)
 	{
-		switch (MenuBar::GetSelectedMenuItem())
+		WindowManager::Focus(win);
+		return nullptr;
+	}
+
+	win = WindowManager::Create(WindowType::FullWindow, RemoteApp);
+	if (win)
+	{
+		win->title = FlashString("Remote");
+		win->w = 100;
+
+#if USE_GAMEPAD_REMOTE
+		win->h = 46;
+#else
+		win->h = 44;
+#endif		
+		win->x = DISPLAY_WIDTH / 2 - win->w / 2;
+		win->y = MenuBar::height;
+		return win;
+	}
+
+	return nullptr;
+}
+
+void Apps::RemoteApp(Window* window, SystemEvent eventType)
+{
+	if (PlatformRemote::IsKeyboardEnabled())
+	{
+		window->Label(FlashString("Remote keyboard enabled"), 5, 12);
+		if (!VirtualKeyboard::IsVisible())
 		{
-		case Menu_File_Close:
-			WindowManager::Destroy(window);
-			break;
+			PlatformRemote::SetKeyboardEnabled(false);
 		}
+	}
+	else if (PlatformRemote::IsMouseEnabled())
+	{
+		window->Label(FlashString("Remote mouse enabled"), 5, 12);
+		window->Label(FlashString("Press A to cancel"), 5, 19);
+	}
+#if USE_GAMEPAD_REMOTE
+	else if (PlatformRemote::IsGamepadEnabled())
+	{
+		window->Label(FlashString("Remote mouse enabled"), 5, 12);
+		window->Label(FlashString("Hold A+B to cancel"), 5, 19);
+	}
+#endif
+	else
+	{
+		if (window->Button(FlashString("Enable remote keyboard"), 3, 10))
+		{
+			window->x = DISPLAY_WIDTH / 2 - window->w / 2;
+			window->y = MenuBar::height;
+			PlatformRemote::SetKeyboardEnabled(true);
+			VirtualKeyboard::Show();
+		}
+		if (window->Button(FlashString("Enable remote mouse"), 3, 22))
+		{
+			PlatformRemote::SetMouseEnabled(true);
+		}
+		window->Label(FlashString("Mouse speed"), 3, 34);
+		window->Slider(50, 35, window->w - 53, mouse.remoteMouseSpeed, 1, 10);
+#if USE_GAMEPAD_REMOTE
+		if (window->Button(FlashString("Enable remote gamepad"), 3, 34))
+		{
+			PlatformRemote::SetGamepadEnabled(true);
+		}
+#endif
+	}
+
+	if (eventType == SystemEvent::CloseWindow)
+	{
+		PlatformRemote::SetKeyboardEnabled(false);
+		PlatformRemote::SetMouseEnabled(false);
+		PlatformRemote::SetGamepadEnabled(false);
+	}
+	else if (eventType == SystemEvent::KeyPressed)
+	{
+		if (PlatformRemote::IsKeyboardEnabled())
+		{
+			PlatformRemote::KeyboardWrite(VirtualKeyboard::GetLastKeyPressed());
+		}
+	}
+	else if (eventType == SystemEvent::Tick)
+	{
+#if USE_GAMEPAD_REMOTE
+		if (PlatformRemote::IsGamepadEnabled())
+		{
+			static uint8_t timer = 0;
+			constexpr uint8_t timeout = 128;
+			uint8_t input = Platform::GetInput();
+			if ((input & (INPUT_A | INPUT_B)) == (INPUT_A | INPUT_B))
+			{
+				timer++;
+				if (timer == timeout)
+				{
+					PlatformRemote::SetGamepadEnabled(false);
+					System::MarkScreenDirty();
+				}
+			}
+			else
+			{
+				timer = 0;
+			}
+		}
+#endif
 	}
 }
