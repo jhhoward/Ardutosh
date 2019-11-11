@@ -2,7 +2,7 @@
 
 ![Demo](demo.gif)
 
-Ardutosh is an OS / desktop environment for the [Arduboy miniature game system](https://www.arduboy.com) made for the Arduboy game jam 4 where the theme was 'no a game'.
+Ardutosh is an OS / desktop environment for the [Arduboy miniature game system](https://www.arduboy.com) made for the Arduboy game jam 4 where the theme was 'not a game'.
 
 The style is inspired by the classic Macintosh interface.
 
