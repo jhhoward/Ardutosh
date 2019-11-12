@@ -13,6 +13,7 @@
 
 VirtualMouse mouse;
 bool System::screenDirty = true;
+bool System::focusedWindowDirty = false;
 System::StateData System::state;
 
 void TestHandler(Window* window)
@@ -73,6 +74,23 @@ void System::Draw()
 {
 	if (!screenDirty)
 	{
+		if (focusedWindowDirty)
+		{
+			state.currentEvent = SystemEvent::Repaint;
+
+			mouse.RestoreBackgroundPixels();
+
+			WindowManager::RepaintFocusedWindow();
+
+			if (!VirtualKeyboard::IsVisible())
+			{
+				mouse.Draw();
+			}
+			state.currentEvent = SystemEvent::None;
+
+			focusedWindowDirty = false;
+		}
+
 		VirtualKeyboard::Update(false);
 		return;
 	}
@@ -98,6 +116,7 @@ void System::Draw()
 
 	state.currentEvent = SystemEvent::None;
 	screenDirty = false;
+	focusedWindowDirty = false;
 
 	VirtualKeyboard::Update(true);
 }

@@ -85,7 +85,7 @@ void Window::HandleEvent(SystemEvent eventType)
 				if (IsMouseOverCloseButton())
 				{
 					System::EnterState(System::State::ClickingCloseWindowButton, GetHandle());
-					System::MarkScreenDirty();
+					MarkContentsDirty();
 				}
 				else
 				{
@@ -209,14 +209,14 @@ bool Window::Button(xString label, int16_t buttonX, int16_t buttonY)
 		if (mouseOver)
 		{
 			System::EnterState(System::State::ClickingButton, GetCurrentElement());
-			System::MarkScreenDirty();
+			MarkContentsDirty();
 			System::MarkEventHandled();
 		}
 		break;
 	case SystemEvent::MouseMove:
 		if (isClicked)
 		{
-			System::MarkScreenDirty();
+			MarkContentsDirty();
 		}
 		break;
 	case SystemEvent::MouseUp:
@@ -227,7 +227,7 @@ bool Window::Button(xString label, int16_t buttonX, int16_t buttonY)
 				result = true;
 			}
 			System::ExitState(System::State::ClickingButton);
-			System::MarkScreenDirty();
+			MarkContentsDirty();
 			System::MarkEventHandled();
 		}
 		break;
@@ -285,7 +285,7 @@ void Window::Slider(int16_t sliderX, int16_t sliderY, uint8_t sliderWidth, uint8
 			else if (newValue > max)
 				newValue = max;
 			current = newValue;
-			System::MarkScreenDirty();
+			MarkContentsDirty();
 		}
 		break;
 	case SystemEvent::MouseUp:
@@ -335,7 +335,7 @@ bool Window::RadioButton(int16_t buttonX, int16_t buttonY, uint8_t buttonWidth, 
 		if (mouse.x >= buttonX && mouse.y >= buttonY && mouse.x <= buttonX + buttonWidth && mouse.y <= buttonY + buttonHeight)
 		{
 			selected = index;
-			System::MarkScreenDirty();
+			MarkContentsDirty();
 			System::MarkEventHandled();
 			return true;
 		}
@@ -391,7 +391,7 @@ void Window::VerticalScrollBar(uint16_t& current, uint16_t max)
 				if (current > 0)
 				{
 					current--;
-					System::MarkScreenDirty();
+					MarkContentsDirty();
 					System::MarkEventHandled();
 				}
 			}
@@ -400,7 +400,7 @@ void Window::VerticalScrollBar(uint16_t& current, uint16_t max)
 				if (current < max)
 				{
 					current++;
-					System::MarkScreenDirty();
+					MarkContentsDirty();
 					System::MarkEventHandled();
 				}
 			}
@@ -418,7 +418,7 @@ void Window::VerticalScrollBar(uint16_t& current, uint16_t max)
 					newWidgetPos = innerY + innerLength;
 
 				current = ((newWidgetPos - innerY) * max) / innerLength;
-				System::MarkScreenDirty();
+				MarkContentsDirty();
 				System::MarkEventHandled();
 			}
 		}
@@ -434,7 +434,7 @@ void Window::VerticalScrollBar(uint16_t& current, uint16_t max)
 			//mouse.deltaY = newWidgetPos - widgetPos;
 
 			current = ((newWidgetPos - innerY) * max) / innerLength;
-			System::MarkScreenDirty();
+			MarkContentsDirty();
 			break;
 		}
 	case SystemEvent::MouseUp:
@@ -467,5 +467,17 @@ WindowHandle Window::GetHandle() const
 
 bool Window::IsFocused()
 {
-	return WindowManager::drawOrder[0] == GetHandle();
+	return WindowManager::drawOrder[0] != WindowManager::invalidWindowHandle && &WindowManager::windows[WindowManager::drawOrder[0]] == this;
+}
+
+void Window::MarkContentsDirty()
+{
+	if (IsFocused())
+	{
+		System::MarkFocusedWindowDirty();
+	}
+	else
+	{
+		System::MarkScreenDirty();
+	}
 }

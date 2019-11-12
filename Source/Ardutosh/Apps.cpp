@@ -168,7 +168,7 @@ void Apps::TerminalApp(Window* window, SystemEvent eventType)
 				}
 				scrollPosition = maxScroll;
 			}
-			System::MarkScreenDirty();
+			window->MarkContentsDirty();
 		}
 	}
 }
@@ -285,7 +285,7 @@ void Apps::TextReaderApp(Window* window, SystemEvent eventType)
 				currentScroll = cursorLine;
 			}
 
-			System::MarkScreenDirty();
+			window->MarkContentsDirty();
 		}
 		if (eventType == SystemEvent::MouseDown)
 		{
@@ -318,7 +318,7 @@ void Apps::TextReaderApp(Window* window, SystemEvent eventType)
 						{
 							cursorLocation = end - 1;
 						}
-						System::MarkScreenDirty();
+						window->MarkContentsDirty();
 						break;
 					}
 
@@ -415,7 +415,7 @@ void Apps::EEPROMInspectorApp(Window* window, SystemEvent eventType)
 
 			uint16_t address = scrollLocation * columnsPerLine + (row * columnsPerLine) + column;
 			cursorLocation = (address * 2) + (selectedLowerNibble ? 1 : 0);
-			System::MarkScreenDirty();
+			window->MarkContentsDirty();
 		}
 	}
 	else if (eventType == SystemEvent::KeyPressed)
@@ -467,7 +467,7 @@ void Apps::EEPROMInspectorApp(Window* window, SystemEvent eventType)
 					scrollLocation--;
 				}
 			}
-			System::MarkScreenDirty();
+			window->MarkContentsDirty();
 		}
 	}
 }
@@ -542,7 +542,7 @@ void Apps::BatteryApp(Window* window, SystemEvent eventType)
 			buffer[bufferSize - 1] = voltage;
 
 			timer = refreshRate;
-			System::MarkScreenDirty();
+			window->MarkContentsDirty();
 		}
 		else timer--;
 	}
@@ -620,7 +620,7 @@ void Apps::TemperatureApp(Window* window, SystemEvent eventType)
 			buffer[bufferSize - 1] = sample;
 
 			timer = refreshRate;
-			System::MarkScreenDirty();
+			window->MarkContentsDirty();
 		}
 		else timer--;
 	}
@@ -734,7 +734,7 @@ void Apps::RemoteApp(Window* window, SystemEvent eventType)
 				if (timer == timeout)
 				{
 					PlatformRemote::SetGamepadEnabled(false);
-					System::MarkScreenDirty();
+					window->MarkContentsDirty();
 				}
 			}
 			else

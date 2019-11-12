@@ -36,6 +36,7 @@ public:
 	static void Tick();
 	static void Draw();
 	static void MarkScreenDirty();
+	static void MarkFocusedWindowDirty() { focusedWindowDirty = true; }
 
 	static void HandleEvent(SystemEvent eventType);
 	//static void EnterState(State newState, WindowHandle window = WindowManager::invalidWindowHandle, uint8_t elementIndex = 0);
@@ -48,6 +49,7 @@ public:
 private:
 	static void DrawBG();
 	static bool screenDirty;
+	static bool focusedWindowDirty;
 };
 
 

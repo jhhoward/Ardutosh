@@ -16,6 +16,8 @@ public:
 	static Window* GetWindow(int16_t x, int16_t y);
 	static void Focus(Window* window);
 
+	static void RepaintFocusedWindow();
+
 	static uint16_t GetMenuBarItemMask();
 
 	static Window* FindByData(void* data);
@@ -36,6 +38,7 @@ public:
 private:
 	friend class Window;
 
+	static void DrawWindow(Window& win);
 	static void DrawAnimations();
 	static int GetDrawPosition(WindowHandle window);
 

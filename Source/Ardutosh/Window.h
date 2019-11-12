@@ -34,6 +34,8 @@ public:
 	void HandleEvent(SystemEvent eventType);
 	bool IsFocused();
 
+	void MarkContentsDirty();
+
 	WindowHandle GetHandle() const;
 
 	WindowType type;

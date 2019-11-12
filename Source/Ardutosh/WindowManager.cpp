@@ -18,6 +18,20 @@ void WindowManager::Init()
 	}
 }
 
+void WindowManager::DrawWindow(Window& win)
+{
+	bool isWindowAnimating = (System::state.currentState == System::State::OpeningWindowAnimation
+		|| System::state.currentState == System::State::ClosingWindowAnimation)
+		&& System::state.stateElement.window == win.GetHandle();
+
+	if (!isWindowAnimating)
+	{
+		VirtualKeyboard::ApplyScreenShift(win.x, win.y);
+		win.Draw();
+		VirtualKeyboard::UnapplyScreenShift(win.x, win.y);
+	}
+}
+
 void WindowManager::Draw()
 {
 	for (int n = maxWindows - 1; n >= 0; n--)
@@ -25,17 +39,7 @@ void WindowManager::Draw()
 		if (drawOrder[n] == invalidWindowHandle)
 			continue;
 		Window& win = windows[drawOrder[n]];
-
-		bool isWindowAnimating = (System::state.currentState == System::State::OpeningWindowAnimation
-			|| System::state.currentState == System::State::ClosingWindowAnimation)
-			&& System::state.stateElement.window == win.GetHandle();
-
-		if (!isWindowAnimating)
-		{
-			VirtualKeyboard::ApplyScreenShift(win.x, win.y);
-			win.Draw();
-			VirtualKeyboard::UnapplyScreenShift(win.x, win.y);
-		}
+		DrawWindow(win);
 	}
 }
 
@@ -346,4 +350,12 @@ bool WindowManager::ShowingDialog()
 		return windows[drawOrder[0]].type == WindowType::DialogBox;
 	}
 	return false;
+}
+
+void WindowManager::RepaintFocusedWindow()
+{
+	if (drawOrder[0] != invalidWindowHandle)
+	{
+		DrawWindow(windows[drawOrder[0]]);
+	}
 }

@@ -290,6 +290,12 @@ void PlatformRemote::SetGamepadEnabled(bool enabled)
 		}
 		else
 		{
+			Keyboard.release(KEY_LEFT_ARROW);
+			Keyboard.release(KEY_RIGHT_ARROW);
+			Keyboard.release(KEY_UP_ARROW);
+			Keyboard.release(KEY_DOWN_ARROW);
+			Keyboard.release(KEY_LEFT_CTRL);
+			Keyboard.release(KEY_RETURN);
 			Keyboard.end();
 		}
 #endif
