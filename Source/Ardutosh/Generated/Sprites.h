@@ -4,10 +4,6 @@ extern const uint8_t mouseCursorSprite[];
 extern const uint8_t documentIcon[];
 // Generated from Assets/arduboy-icon.png
 extern const uint8_t arduboyIcon[];
-// Generated from Assets/trash-empty-icon.png
-extern const uint8_t trashEmptyIcon[];
-// Generated from Assets/trash-full-icon.png
-extern const uint8_t trashFullIcon[];
 // Generated from Assets/terminal-icon.png
 extern const uint8_t terminalIcon[];
 // Generated from Assets/eeprom-icon.png
@@ -38,3 +34,7 @@ extern const uint8_t numbersIcon[];
 extern const uint8_t returnIcon[];
 // Generated from Assets/remote-icon.png
 extern const uint8_t remoteIcon[];
+// Generated from Assets/folder-icon.png
+extern const uint8_t folderIcon[];
+// Generated from Assets/notes-icon.png
+extern const uint8_t notesIcon[];

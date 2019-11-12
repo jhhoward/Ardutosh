@@ -12,7 +12,7 @@ public:
 	static constexpr int firstGlyphIndex = 32;
 
 	static void DrawString(const xString& str, int16_t x, int16_t y, uint8_t colour);
-	static void DrawStringWindowed(const xString& str, int16_t x, int16_t y, uint8_t w, uint8_t h, uint8_t colour);
+	static void DrawStringWindowed(const xString& str, int16_t x, int16_t y, uint8_t w, uint8_t h, uint8_t colour, uint16_t firstLine, uint16_t cursorLocation = -1, bool isFocused = false);
 	static void DrawInt(int16_t val, int16_t x, int16_t y, uint8_t colour);
 	static void DrawHexByte(uint8_t val, int16_t x, int16_t y, uint8_t colour);
 	static void DrawHexInt(uint16_t val, int16_t x, int16_t y, uint8_t colour);

@@ -4,9 +4,9 @@
 #include <Keyboard.h>
 #include <Mouse.h>
 
-#define USE_GAMEPAD_REMOTE 0
+#define USE_JOYSTICK_LIB 0
 
-#if USE_GAMEPAD_REMOTE
+#if USE_JOYSTICK_LIB
 #include <Joystick.h>
 #endif
 
@@ -18,7 +18,7 @@ Arduboy2Base arduboy;
 //ArduboyTones sound(arduboy.audio.enabled);
 Sprites sprites;
 
-#if USE_GAMEPAD_REMOTE
+#if USE_JOYSTICK_LIB
 Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID,JOYSTICK_TYPE_GAMEPAD,
   2, 0,                  // Button Count, Hat Switch Count
   true, true, false,     // X and Y, but no Z Axis
@@ -272,9 +272,9 @@ void PlatformRemote::MouseUp()
 bool remoteGamepadEnabled = false;
 void PlatformRemote::SetGamepadEnabled(bool enabled)
 {
-#if USE_GAMEPAD_REMOTE
 	if(enabled != remoteGamepadEnabled)
 	{
+#if USE_JOYSTICK_LIB
 		if(enabled)
 		{
 			Joystick.begin();
@@ -283,9 +283,18 @@ void PlatformRemote::SetGamepadEnabled(bool enabled)
 		{
 			Joystick.end();
 		}
+#else
+		if(enabled)
+		{
+			Keyboard.begin();
+		}
+		else
+		{
+			Keyboard.end();
+		}
+#endif
 		remoteGamepadEnabled = enabled;
 	}
-#endif
 }
 bool PlatformRemote::IsGamepadEnabled()
 {
@@ -319,7 +328,7 @@ void loop()
   tickAccum += (timingSample - lastTimingSample);
   lastTimingSample = timingSample;
   
-#if USE_GAMEPAD_REMOTE
+#if USE_JOYSTICK_LIB
   if(remoteGamepadEnabled)
   {
 	Joystick.setButton(0, arduboy.pressed(A_BUTTON));
@@ -338,6 +347,36 @@ void loop()
 		dirY++;
 	Joystick.setXAxis(dirX);
 	Joystick.setYAxis(dirY);
+  }
+#else
+  if(remoteGamepadEnabled)
+  {
+	if(arduboy.justPressed(LEFT_BUTTON))
+		Keyboard.press(KEY_LEFT_ARROW);
+	if(arduboy.justPressed(RIGHT_BUTTON))
+		Keyboard.press(KEY_RIGHT_ARROW);
+	if(arduboy.justPressed(UP_BUTTON))
+		Keyboard.press(KEY_UP_ARROW);
+	if(arduboy.justPressed(DOWN_BUTTON))
+		Keyboard.press(KEY_DOWN_ARROW);
+	if(arduboy.justPressed(A_BUTTON))
+		Keyboard.press(KEY_LEFT_CTRL);
+	if(arduboy.justPressed(B_BUTTON))
+		Keyboard.press(KEY_RETURN);
+		
+	if(arduboy.justReleased(LEFT_BUTTON))
+		Keyboard.release(KEY_LEFT_ARROW);
+	if(arduboy.justReleased(RIGHT_BUTTON))
+		Keyboard.release(KEY_RIGHT_ARROW);
+	if(arduboy.justReleased(UP_BUTTON))
+		Keyboard.release(KEY_UP_ARROW);
+	if(arduboy.justReleased(DOWN_BUTTON))
+		Keyboard.release(KEY_DOWN_ARROW);
+	if(arduboy.justReleased(A_BUTTON))
+		Keyboard.release(KEY_LEFT_CTRL);
+	if(arduboy.justReleased(B_BUTTON))
+		Keyboard.release(KEY_RETURN);
+		
   }
 #endif
 	
@@ -372,4 +411,6 @@ void loop()
 	
     arduboy.display(false);
   }
+  
+  arduboy.pollButtons();
 }

@@ -6,6 +6,7 @@
 #include "WindowManager.h"
 #include "Generated/Sprites.h"
 #include "Apps.h"
+#include "Finder.h"
 #include "MenuBar.h"
 #include "VirtualKeyboard.h"
 
@@ -28,12 +29,12 @@ void Desktop::Handler(Window* window, SystemEvent event)
 
 	if (window->Item(arduboyIcon, FlashString("Arduboy"), itemsX, itemsY))
 	{
-		if (Window* win = Apps::OpenFinderApp())
+		if (Window* win = Finder::OpenArduboyFolder())
 		{
 			win->OpenWithAnimation(itemsX + 5, itemsY + 5);
 		}
 	}
-	if (window->Item(trashEmptyIcon, FlashString("Trash"), itemsX, DISPLAY_HEIGHT - itemHeight - padding))
+	/*if (window->Item(trashEmptyIcon, FlashString("Trash"), itemsX, DISPLAY_HEIGHT - itemHeight - padding))
 	{
 		Window* win = WindowManager::FindByData(trashFinderHandle);
 
@@ -55,7 +56,7 @@ void Desktop::Handler(Window* window, SystemEvent event)
 				win->OpenWithAnimation(itemsX + 5, DISPLAY_HEIGHT - itemHeight - padding + 5);
 			}
 		}
-	}
+	}*/
 
 	/*if (event == SystemEvent::KeyPressed)
 	{

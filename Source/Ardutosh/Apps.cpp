@@ -10,57 +10,7 @@
 
 const char ReadmeContents[] PROGMEM = "Welcome to the Arduboy desktop environment!\nWritten by James Howard for the Arduboy game jam 4 where the theme was 'not a game'.\nThe graphical style is based on the classic Macintosh interface.";
 
-#define USE_GAMEPAD_REMOTE 0
-
-struct GridView
-{
-	GridView(Window* inWindow, int inStartX = 14, int inStartY = 10, int inSpacingX = 30, int inSpacingY = 22) 
-		: x(inStartX), y(inStartY), window(inWindow), startX(inStartX), startY(inStartY), spacingX(inSpacingX), spacingY(inSpacingY)
-	{
-	}
-
-	int x, y;
-
-	void Next()
-	{
-		x += spacingX;
-		if (x >= window->w)
-		{
-			x = startX;
-			y += spacingY;
-		}
-	}
-
-private:
-	Window* window;
-	int startX, startY;
-	int spacingX, spacingY;
-};
-
-Window* Apps::OpenTerminalApp()
-{
-	Window* win = WindowManager::FindByHandler(TerminalApp);
-
-	if (win)
-	{
-		WindowManager::Focus(win);
-		return nullptr;
-	}
-
-	win = WindowManager::Create(WindowType::FullWindow, TerminalApp);
-	if (win)
-	{
-		win->title = FlashString("Terminal");
-		win->x = 0;
-		win->y = 8;
-		win->w = 128;
-		win->h = 54;
-		return win;
-		//win->OpenWithAnimation(itemsX + 5, itemsY + 5);
-	}
-
-	return nullptr;
-}
+char Apps::NotesBuffer[Apps::maxNotesBufferSize + 1];
 
 void Apps::SetBaudRateDialog(Window* window, SystemEvent eventType)
 {
@@ -146,12 +96,7 @@ void Apps::TerminalApp(Window* window, SystemEvent eventType)
 	}
 	else if (eventType == SystemEvent::Repaint)
 	{
-		Font::DrawStringWindowed(str.SubstringAtLine(scrollPosition, numColumns), window->x + 2, window->y + 11, window->w - 15, window->h - 12, BLACK);
-		if (window->IsFocused())
-		{
-			VirtualKeyboard::SetCursorScreenLocation(Font::GetCursorX(), Font::GetCursorY());
-		}
-		Font::DrawCaret(BLACK);
+		Font::DrawStringWindowed(str, window->x + 2, window->y + 11, window->w - 15, window->h - 12, BLACK, scrollPosition, str.Length(), window->IsFocused());
 	}
 	else if (eventType == SystemEvent::Tick)
 	{
@@ -228,112 +173,23 @@ void Apps::TerminalApp(Window* window, SystemEvent eventType)
 	}
 }
 
-Window* Apps::OpenFinderApp()
-{
-	Window* win = WindowManager::FindByHandler(FinderApp);
-
-	if (win)
-	{
-		WindowManager::Focus(win);
-		return nullptr;
-	}
-
-	win = WindowManager::Create(WindowType::FullWindow, FinderApp);
-	if (win)
-	{
-		win->title = FlashString("Arduboy");
-		win->x = 0;
-		win->y = 8;
-		win->w = 128;
-		win->h = 54;
-		return win;
-	}
-
-	return nullptr;
-}
-
-typedef Window*(*FinderItemHandler)();
-
-struct FinderItem
-{
-	const uint8_t* icon;
-	const char label[9];
-	FinderItemHandler handler;
-
-	const uint8_t* GetIcon() const { return (uint8_t*)pgm_read_ptr(&icon); }
-	FinderItemHandler GetHandler() const { return (FinderItemHandler) pgm_read_ptr(&handler);  }
-};
-
-const static FinderItem finderItems[] PROGMEM =
-{
-	{ terminalIcon,		"Terminal",		Apps::OpenTerminalApp },
-	{ eepromIcon,		"EEPROM",		Apps::OpenEEPROMInspectorApp },
-	{ batteryIcon,		"Battery",		Apps::OpenBatteryApp },
-	{ temperatureIcon,	"Thermal",		Apps::OpenTemperatureApp },
-	{ ledIcon,			"LED",			Apps::OpenLEDApp },
-	{ remoteIcon,		"Remote",		Apps::OpenRemoteApp },
-	{ documentIcon,		"Readme",		Apps::OpenReadme },
-};
-
-void Apps::FinderApp(Window* window, SystemEvent eventType)
-{
-	GridView grid(window);
-
-	for(const FinderItem& item : finderItems)
-	{
-		if (window->Item(item.GetIcon(), xString(item.label, xString::Type::Flash), grid.x, grid.y))
-		{
-			if (Window* win = item.GetHandler()())
-			{
-				win->OpenWithAnimation(grid.x + 5, grid.y + 5);
-			}
-		}
-		grid.Next();
-	}
-}
-
-Window* Apps::OpenReadme()
-{
-	return OpenTextReader(FlashString("Readme"), ReadmeContents);
-}
-
-Window* Apps::OpenTextReader(const xString& title, const xString& contents)
-{
-	Window* win = WindowManager::FindByData((void*)contents.GetData());
-
-	if (win)
-	{
-		WindowManager::Focus(win);
-		return nullptr;
-	}
-
-	win = WindowManager::Create(WindowType::FullWindow, TextReaderApp);
-	if (win)
-	{
-		win->title = title;
-		win->data = (void*) contents.GetData();
-		win->x = 12;
-		win->y = 9;
-		win->w = 86;
-		win->h = 54;
-		return win;
-	}
-
-	return nullptr;
-}
-
 void Apps::TextReaderApp(Window* window, SystemEvent eventType)
 {
-	xString str((const char*)window->data, xString::Type::Flash);
-	static uint16_t currentScroll = 0;
+	bool isReadme = window->data != NotesBuffer;
+	xString str = isReadme ? xString(ReadmeContents, xString::Type::Flash) : xString(NotesBuffer, xString::Type::RAM);
+	static uint16_t notesScroll = 0;
+	static uint16_t readmeScroll = 0;
+	uint16_t& currentScroll = isReadme ? readmeScroll : notesScroll;
 	int textAreaWidth = window->w - 12;
 	int textAreaHeight = window->h - 12;
 	int numRows = textAreaHeight / (Font::glyphHeight + 1);
 	int numColumns = textAreaWidth / Font::glyphWidth;
 	int numLinesInText = str.NumLines(numColumns);
 	uint16_t maxScroll = 0;
+	static uint16_t cursorLocation = -1;
+	constexpr uint16_t storageStartLocation = 16;
 
-	if (numRows > maxScroll)
+	if (numLinesInText > numRows)
 	{
 		maxScroll = numLinesInText - numRows;
 	}
@@ -341,33 +197,137 @@ void Apps::TextReaderApp(Window* window, SystemEvent eventType)
 	window->VerticalScrollBar(currentScroll, maxScroll);
 	if (eventType == SystemEvent::Repaint)
 	{
-		Font::DrawStringWindowed(str.SubstringAtLine(currentScroll, numColumns), window->x + 2, window->y + 11, textAreaWidth, textAreaHeight, BLACK);
+		if (isReadme)
+		{
+			Font::DrawStringWindowed(str, window->x + 2, window->y + 11, textAreaWidth, textAreaHeight, BLACK, currentScroll);
+		}
+		else
+		{
+			Font::DrawStringWindowed(str, window->x + 2, window->y + 11, textAreaWidth, textAreaHeight, BLACK, currentScroll, cursorLocation, window->IsFocused());
+		}
 	}
-}
-
-Window* Apps::OpenEEPROMInspectorApp()
-{
-	Window* win = WindowManager::FindByHandler(EEPROMInspectorApp);
-
-	if (win)
+	
+	if (!isReadme)
 	{
-		WindowManager::Focus(win);
-		return nullptr;
-	}
+		bool hasFile = PlatformStorage::GetByte(storageStartLocation) == 'T'
+					&& PlatformStorage::GetByte(storageStartLocation + 1) == 'O'
+					&& PlatformStorage::GetByte(storageStartLocation + 2) == 'S'
+					&& PlatformStorage::GetByte(storageStartLocation + 3) == 'H';
 
-	win = WindowManager::Create(WindowType::FullWindow, EEPROMInspectorApp);
-	if (win)
-	{
-		win->title = FlashString("EEPROM");
-		win->x = 0;
-		win->y = 8;
-		win->w = 128;
-		win->h = 54;
-		return win;
-		//win->OpenWithAnimation(itemsX + 5, itemsY + 5);
-	}
+		if(hasFile && (window->MenuItem(Menu_File_Load) || eventType == SystemEvent::OpenWindow))
+		{
+			uint16_t address = storageStartLocation + 4;
+			for (int n = 0; n < maxNotesBufferSize; n++)
+			{
+				NotesBuffer[n] = PlatformStorage::GetByte(address++);
+			}
+		}
 
-	return nullptr;
+		if (window->MenuItem(Menu_File_Save))
+		{
+			uint16_t address = storageStartLocation;
+			PlatformStorage::SetByte(address++, 'T');
+			PlatformStorage::SetByte(address++, 'O');
+			PlatformStorage::SetByte(address++, 'S');
+			PlatformStorage::SetByte(address++, 'H');
+			for (int n = 0; n < str.Length(); n++)
+			{
+				PlatformStorage::SetByte(address++, str[n]);
+			}
+			PlatformStorage::SetByte(address, '\0');
+		}
+
+		if (window->MenuItem(Menu_Edit_Clear))
+		{
+			for (int n = 0; n < maxNotesBufferSize; n++)
+			{
+				NotesBuffer[n] = 0;
+			}
+		}
+
+		if (cursorLocation > str.Length())
+			cursorLocation = str.Length();
+
+		if (eventType == SystemEvent::KeyPressed)
+		{
+			char keyPressed = VirtualKeyboard::GetLastKeyPressed();
+
+			if (keyPressed == '\b')
+			{
+				if (cursorLocation > 0)
+				{
+					str.Remove(cursorLocation - 1);
+					cursorLocation--;
+				}
+			}
+			else if (str.Length() < maxNotesBufferSize)
+			{
+				str.Insert(keyPressed, cursorLocation);
+				cursorLocation++;
+			}
+
+			int cursorLine = 0;
+			int i = 0;
+			int length = str.Length();
+			while (i < length)
+			{
+				i = str.GetLineEndIndex(i, numColumns);
+				if (i > cursorLocation)
+					break;
+				cursorLine++;
+			}
+			if (currentScroll <= cursorLine - numRows)
+			{
+				currentScroll = cursorLine - numRows + 1;
+			}
+			else if (currentScroll > cursorLine)
+			{
+				currentScroll = cursorLine;
+			}
+
+			System::MarkScreenDirty();
+		}
+		if (eventType == SystemEvent::MouseDown)
+		{
+			int clickedX = mouse.x - window->x - 2;
+			int clickedY = mouse.y - window->y - 11;
+			if (clickedX >= 0 && clickedY >= 0 && clickedX < textAreaWidth && clickedY < textAreaHeight)
+			{
+				int clickedColumn = clickedX / Font::glyphWidth;
+				int clickedRow = clickedY / (Font::glyphHeight + 1);
+
+				int i = str.GetLineStartIndex(currentScroll, numColumns);
+				int length = str.Length();
+				int rowCount = 0;
+
+				while (i < length)
+				{
+					int end = str.GetLineEndIndex(i, numColumns);
+
+					if (rowCount == clickedRow)
+					{
+						if (clickedColumn < (end - i))
+						{
+							cursorLocation = i + clickedColumn;
+						}
+						else if (end == length)
+						{
+							cursorLocation = end;
+						}
+						else
+						{
+							cursorLocation = end - 1;
+						}
+						System::MarkScreenDirty();
+						break;
+					}
+
+					rowCount++;
+					i = end;
+				}
+			}
+		}
+	}
 }
 
 void Apps::EEPROMInspectorApp(Window* window, SystemEvent eventType)
@@ -513,30 +473,6 @@ void Apps::EEPROMInspectorApp(Window* window, SystemEvent eventType)
 }
 
 
-Window* Apps::OpenBatteryApp()
-{
-	Window* win = WindowManager::FindByHandler(BatteryApp);
-
-	if (win)
-	{
-		WindowManager::Focus(win);
-		return nullptr;
-	}
-
-	win = WindowManager::Create(WindowType::FullWindow, BatteryApp);
-	if (win)
-	{
-		win->title = FlashString("Battery");
-		win->x = 0;
-		win->y = 8;
-		win->w = 85;
-		win->h = 54;
-		return win;
-	}
-
-	return nullptr;
-}
-
 void Apps::BatteryApp(Window* window, SystemEvent eventType)
 {
 	constexpr int refreshRate = 60;
@@ -618,30 +554,6 @@ void Apps::BatteryApp(Window* window, SystemEvent eventType)
 	}
 }
 
-Window* Apps::OpenTemperatureApp()
-{
-	Window* win = WindowManager::FindByHandler(TemperatureApp);
-
-	if (win)
-	{
-		WindowManager::Focus(win);
-		return nullptr;
-	}
-
-	win = WindowManager::Create(WindowType::FullWindow, TemperatureApp);
-	if (win)
-	{
-		win->title = FlashString("Temperature");
-		win->x = 0;
-		win->y = 8;
-		win->w = 85;
-		win->h = 54;
-		return win;
-	}
-
-	return nullptr;
-}
-
 void Apps::TemperatureApp(Window* window, SystemEvent eventType)
 {
 	constexpr int refreshRate = 60;
@@ -720,30 +632,6 @@ void Apps::TemperatureApp(Window* window, SystemEvent eventType)
 	}
 }
 
-Window* Apps::OpenLEDApp()
-{
-	Window* win = WindowManager::FindByHandler(LEDApp);
-
-	if (win)
-	{
-		WindowManager::Focus(win);
-		return nullptr;
-	}
-
-	win = WindowManager::Create(WindowType::FullWindow, LEDApp);
-	if (win)
-	{
-		win->title = FlashString("LED");
-		win->x = 8;
-		win->y = 10;
-		win->w = 74;
-		win->h = 52;
-		return win;
-	}
-
-	return nullptr;
-}
-
 void Apps::LEDApp(Window* window, SystemEvent eventType)
 {
 	constexpr int sliderX = 26;
@@ -779,35 +667,6 @@ void Apps::LEDApp(Window* window, SystemEvent eventType)
 	}
 }
 
-Window* Apps::OpenRemoteApp()
-{
-	Window* win = WindowManager::FindByHandler(RemoteApp);
-
-	if (win)
-	{
-		WindowManager::Focus(win);
-		return nullptr;
-	}
-
-	win = WindowManager::Create(WindowType::FullWindow, RemoteApp);
-	if (win)
-	{
-		win->title = FlashString("Remote");
-		win->w = 100;
-
-#if USE_GAMEPAD_REMOTE
-		win->h = 46;
-#else
-		win->h = 44;
-#endif		
-		win->x = DISPLAY_WIDTH / 2 - win->w / 2;
-		win->y = MenuBar::height;
-		return win;
-	}
-
-	return nullptr;
-}
-
 void Apps::RemoteApp(Window* window, SystemEvent eventType)
 {
 	if (PlatformRemote::IsKeyboardEnabled())
@@ -820,16 +679,14 @@ void Apps::RemoteApp(Window* window, SystemEvent eventType)
 	}
 	else if (PlatformRemote::IsMouseEnabled())
 	{
-		window->Label(FlashString("Remote mouse enabled"), 5, 12);
-		window->Label(FlashString("Press A to cancel"), 5, 19);
+		window->Label(FlashString("Remote mouse enabled"), 5, 22);
+		window->Label(FlashString("Press A to cancel"), 5, 29);
 	}
-#if USE_GAMEPAD_REMOTE
 	else if (PlatformRemote::IsGamepadEnabled())
 	{
-		window->Label(FlashString("Remote mouse enabled"), 5, 12);
-		window->Label(FlashString("Hold A+B to cancel"), 5, 19);
+		window->Label(FlashString("Remote gamepad enabled"), 5, 22);
+		window->Label(FlashString("Hold A+B to cancel"), 5, 29);
 	}
-#endif
 	else
 	{
 		if (window->Button(FlashString("Enable remote keyboard"), 3, 10))
@@ -845,12 +702,10 @@ void Apps::RemoteApp(Window* window, SystemEvent eventType)
 		}
 		window->Label(FlashString("Mouse speed"), 3, 34);
 		window->Slider(50, 35, window->w - 53, mouse.remoteMouseSpeed, 1, 10);
-#if USE_GAMEPAD_REMOTE
-		if (window->Button(FlashString("Enable remote gamepad"), 3, 34))
+		if (window->Button(FlashString("Enable remote gamepad"), 3, 42))
 		{
 			PlatformRemote::SetGamepadEnabled(true);
 		}
-#endif
 	}
 
 	if (eventType == SystemEvent::CloseWindow)
@@ -868,7 +723,6 @@ void Apps::RemoteApp(Window* window, SystemEvent eventType)
 	}
 	else if (eventType == SystemEvent::Tick)
 	{
-#if USE_GAMEPAD_REMOTE
 		if (PlatformRemote::IsGamepadEnabled())
 		{
 			static uint8_t timer = 0;
@@ -888,6 +742,6 @@ void Apps::RemoteApp(Window* window, SystemEvent eventType)
 				timer = 0;
 			}
 		}
-#endif
 	}
 }
+

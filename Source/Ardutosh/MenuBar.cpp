@@ -92,6 +92,8 @@ struct MenuItem
 const MenuItem menuItems[] PROGMEM =
 {
 	{ "File" },
+		{ "Load",			Menu_File_Load },
+		{ "Save",			Menu_File_Save },
 		{ "Dump EEPROM",	Menu_File_DumpEEPROM },
 		{ "Close",			Menu_File_Close },
 

@@ -122,6 +122,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\Ardutosh\Apps.cpp" />
     <ClCompile Include="..\..\Ardutosh\Desktop.cpp" />
+    <ClCompile Include="..\..\Ardutosh\Finder.cpp" />
     <ClCompile Include="..\..\Ardutosh\Font.cpp" />
     <ClCompile Include="..\..\Ardutosh\Input.cpp" />
     <ClCompile Include="..\..\Ardutosh\VirtualKeyboard.cpp" />
@@ -138,6 +139,7 @@
     <ClInclude Include="..\..\Ardutosh\Defines.h" />
     <ClInclude Include="..\..\Ardutosh\Desktop.h" />
     <ClInclude Include="..\..\Ardutosh\Element.h" />
+    <ClInclude Include="..\..\Ardutosh\Finder.h" />
     <ClInclude Include="..\..\Ardutosh\Font.h" />
     <ClInclude Include="..\..\Ardutosh\Input.h" />
     <ClInclude Include="..\..\Ardutosh\VirtualKeyboard.h" />

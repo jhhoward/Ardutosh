@@ -61,7 +61,7 @@ void WindowManager::Destroy(Window* window)
 	System::MarkScreenDirty();
 }
 
-Window* WindowManager::Create(WindowType type, WindowHandler handler)
+Window* WindowManager::Create(WindowType type, WindowHandler handler, void* data)
 {
 	for (int n = 0; n < maxWindows; n++)
 	{
@@ -70,6 +70,11 @@ Window* WindowManager::Create(WindowType type, WindowHandler handler)
 			Window* newWindow = &windows[n];
 			newWindow->type = type;
 			newWindow->handler = handler;
+			newWindow->x = 0;
+			newWindow->y = MenuBar::height;
+			newWindow->w = 50;
+			newWindow->y = 50;
+			newWindow->data = data;
 
 			for (int i = 0; i < maxWindows; i++)
 			{

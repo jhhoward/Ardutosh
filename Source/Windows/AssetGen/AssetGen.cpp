@@ -676,8 +676,8 @@ int main(int argc, char* argv[])
 	EncodeSprite2D(typeFile, dataFile, "Assets/mouse-cursor.png", "mouseCursorSprite");
 	EncodeSprite2D(typeFile, dataFile, "Assets/document-icon.png", "documentIcon");
 	EncodeSprite2D(typeFile, dataFile, "Assets/arduboy-icon.png", "arduboyIcon");
-	EncodeSprite2D(typeFile, dataFile, "Assets/trash-empty-icon.png", "trashEmptyIcon");
-	EncodeSprite2D(typeFile, dataFile, "Assets/trash-full-icon.png", "trashFullIcon");
+	//EncodeSprite2D(typeFile, dataFile, "Assets/trash-empty-icon.png", "trashEmptyIcon");
+	//EncodeSprite2D(typeFile, dataFile, "Assets/trash-full-icon.png", "trashFullIcon");
 	EncodeSprite2D(typeFile, dataFile, "Assets/terminal-icon.png", "terminalIcon");
 	EncodeSprite2D(typeFile, dataFile, "Assets/eeprom-icon.png", "eepromIcon");
 	EncodeSprite2D(typeFile, dataFile, "Assets/up-icon.png", "upIcon");
@@ -693,6 +693,8 @@ int main(int argc, char* argv[])
 	EncodeSprite2D(typeFile, dataFile, "Assets/numbers-icon.png", "numbersIcon");
 	EncodeSprite2D(typeFile, dataFile, "Assets/return-icon.png", "returnIcon");
 	EncodeSprite2D(typeFile, dataFile, "Assets/remote-icon.png", "remoteIcon");
+	EncodeSprite2D(typeFile, dataFile, "Assets/folder-icon.png", "folderIcon");
+	EncodeSprite2D(typeFile, dataFile, "Assets/notes-icon.png", "notesIcon");
 
 	dataFile.close();
 	typeFile.close();

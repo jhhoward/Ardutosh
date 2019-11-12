@@ -5,6 +5,7 @@
 #include "Defines.h"
 #include "Font.h"
 #include "Platform.h"
+#include "VirtualKeyboard.h"
 
 // Font Definition
 const uint8_t font4x6[96][2] PROGMEM = {
@@ -306,13 +307,13 @@ void Font::DrawCaret(uint8_t colour)
 	cursorX += glyphWidth;
 }
 
-void Font::DrawStringWindowed(const xString& str, int16_t x, int16_t y, uint8_t w, uint8_t h, uint8_t colour)
+void Font::DrawStringWindowed(const xString& str, int16_t x, int16_t y, uint8_t w, uint8_t h, uint8_t colour, uint16_t firstLine, uint16_t cursorLocation, bool isFocused)
 {
 	cursorX = x;
 	cursorY = y;
 
 	int columns = w / glyphWidth;
-	int i = 0;
+	int i = str.GetLineStartIndex(firstLine, columns);
 	int length = str.Length();
 
 	while (i < length)
@@ -321,8 +322,22 @@ void Font::DrawStringWindowed(const xString& str, int16_t x, int16_t y, uint8_t 
 
 		while (i < end)
 		{
+			bool isCursor = cursorLocation == i;
 			char c = str[i++];
-			DrawChar(c, colour);
+
+			if (isCursor)
+			{
+				if (isFocused)
+				{
+					VirtualKeyboard::SetCursorScreenLocation(cursorX, cursorY);
+				}
+				Platform::FillRect(cursorX, cursorY, glyphWidth, glyphHeight, colour);
+				DrawChar(c, !colour);
+			}
+			else
+			{
+				DrawChar(c, colour);
+			}
 		}
 
 		if (i < length)
@@ -331,17 +346,23 @@ void Font::DrawStringWindowed(const xString& str, int16_t x, int16_t y, uint8_t 
 			cursorX = x;
 
 			if (cursorY + glyphHeight >= y + h)
-				break;
+				return;
 		}
-		else
+	}
+
+	// If ends with a new line then move cursor to next line
+	if (str[length - 1] == '\n' || str[length - 1] == '\r')
+	{
+		cursorY += glyphHeight + 1;
+		cursorX = x;
+	}
+	if (cursorLocation == length)
+	{
+		if (isFocused)
 		{
-			// If ends with a new line then move cursor to next line
-			if (str[length - 1] == '\n' || str[length - 1] == '\r')
-			{
-				cursorY += glyphHeight + 1;
-				cursorX = x;
-			}
+			VirtualKeyboard::SetCursorScreenLocation(cursorX, cursorY);
 		}
+		Platform::FillRect(cursorX, cursorY, glyphWidth, glyphHeight, colour);
 	}
 }
 

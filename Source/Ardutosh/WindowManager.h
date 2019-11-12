@@ -11,7 +11,7 @@ public:
 	static bool HandleEvent(SystemEvent eventType);
 
 	static Window* GetWindow(WindowHandle handle);
-	static Window* Create(WindowType type, WindowHandler handler);
+	static Window* Create(WindowType type, WindowHandler handler, void* data = nullptr);
 	static void Destroy(Window* window);
 	static Window* GetWindow(int16_t x, int16_t y);
 	static void Focus(Window* window);

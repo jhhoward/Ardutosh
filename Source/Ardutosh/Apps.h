@@ -8,17 +8,6 @@ class xString;
 class Apps
 {
 public:
-	static Window* OpenTerminalApp();
-	static Window* OpenFinderApp();
-	static Window* OpenEEPROMInspectorApp();
-	static Window* OpenBatteryApp();
-	static Window* OpenTemperatureApp();
-	static Window* OpenLEDApp();
-	static Window* OpenRemoteApp();
-	static Window* OpenTextReader(const xString& title, const xString& contents);
-	static Window* OpenReadme();
-
-private:
 	static void TerminalApp(Window* window, SystemEvent eventType);
 	static void FinderApp(Window* window, SystemEvent eventType);
 	static void TextReaderApp(Window* window, SystemEvent eventType);
@@ -29,4 +18,7 @@ private:
 	static void RemoteApp(Window* window, SystemEvent eventType);
 
 	static void SetBaudRateDialog(Window* window, SystemEvent eventType);
+
+	static constexpr int maxNotesBufferSize = 400;
+	static char NotesBuffer[maxNotesBufferSize + 1];
 };

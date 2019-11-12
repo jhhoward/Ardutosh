@@ -40,6 +40,7 @@ int VirtualKeyboard::cursorScreenLocationX;
 int VirtualKeyboard::cursorScreenLocationY;
 int VirtualKeyboard::screenShiftX;
 int VirtualKeyboard::screenShiftY;
+static uint8_t lastInput = Platform::GetInput();
 
 int VirtualKeyboard::CountKeysOnRow(const char* c)
 {
@@ -88,6 +89,7 @@ void VirtualKeyboard::Show()
 {
 	currentLayout = keyboardLayout;
 	keyboardVisible = true;
+	lastInput = Platform::GetInput();
 	System::MarkScreenDirty();
 }
 
@@ -98,7 +100,6 @@ void VirtualKeyboard::SetHexInputLayout()
 
 void VirtualKeyboard::Update(bool fullRefresh)
 {
-	static uint8_t lastInput = Platform::GetInput();
 	uint8_t input = Platform::GetInput();
 
 	if ((input & INPUT_A) && !(lastInput & INPUT_A))

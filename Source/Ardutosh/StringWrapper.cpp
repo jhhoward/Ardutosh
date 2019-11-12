@@ -87,7 +87,7 @@ int xString::NumLines(int maxCharactersPerLine) const
 	return count;
 }
 
-xString xString::SubstringAtLine(int lineNumber, int maxCharactersPerLine) const
+int xString::GetLineStartIndex(int lineNumber, int maxCharactersPerLine) const
 {
 	int length = Length();
 	int index = 0;
@@ -102,7 +102,7 @@ xString xString::SubstringAtLine(int lineNumber, int maxCharactersPerLine) const
 		lineNumber--;
 	}
 
-	return xString(data + index, type);
+	return index; 
 }
 
 int xString::GetLineEndIndex(int start, int maxCharactersPerLine) const
@@ -144,4 +144,25 @@ int xString::GetLineEndIndex(int start, int maxCharactersPerLine) const
 	}
 
 	return length;
+}
+
+void xString::Insert(char c, int index)
+{
+	int length = Length();
+
+	for (int n = length; n > index; n--)
+	{
+		data[n] = data[n - 1];
+	}
+	data[index] = c;
+}
+
+void xString::Remove(int index)
+{
+	int length = Length();
+
+	for (int n = index; n < length; n++)
+	{
+		data[n] = data[n + 1];
+	}
 }

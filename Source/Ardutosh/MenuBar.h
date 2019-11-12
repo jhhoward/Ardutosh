@@ -8,8 +8,10 @@ typedef uint16_t MenuBarMask;
 enum MenuItemType
 {
 	Menu_Item_Null = 0,
+	Menu_File_Save = 1,
 	Menu_File_Close = 2,
 	Menu_File_DumpEEPROM = 4,
+	Menu_File_Load = 8,
 
 	Menu_Edit_Clear = 32,
 	Menu_Edit_SetBaud = 64,
