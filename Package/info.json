@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 2,
+  "title": "Ardutosh",
+  "description": "Classic Macintosh style desktop environment for Arduboy",
+  "author": "James Howard",
+  "version": "1.0",
+  "date": "2019-07-04",
+  "genre": "Action",
+  "publisher": "",
+  "idea": "",
+  "code": "",
+  "art": "",
+  "sound": "",
+  "url": "https://github.com/jhhoward/Ardutosh",
+  "sourceUrl": "https://github.com/jhhoward/Ardutosh",
+  "email": "",
+  "companion": "",
+  "banner": "banner.png",
+  "screenshots": [
+    {
+      "title": "",
+      "filename": "screen1.png"
+    },
+    {
+      "title": "",
+      "filename": "screen2.png"
+    }
+  ],
+  "binaries": [
+    {
+      "title": "Ardutosh",
+      "filename": "Ardutosh.hex",
+      "device": "Arduboy"
+    }
+  ],
+  "buttons": [
+    {
+      "control": "",
+      "action": ""
+    }
+  ],
+}
