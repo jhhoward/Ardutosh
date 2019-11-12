@@ -6,6 +6,20 @@ Ardutosh is an OS / desktop environment for the [Arduboy miniature game system](
 
 The style is inspired by the classic Macintosh interface.
 
+**Features**
+* Serial terminal
+* Remote app : use your Arduboy as a USB keyboard and mouse when plugged into a PC. Gamepad mapping for USB keyboard for use with games.
+* Notes text editor allows you to save text to the EEPROM
+* EEPROM hex editor: inspect and edit hex values of your Arduboy’s EEPROM
+* Battery voltage monitor
+* Internal temperature monitor
+* LED tester
+
+**Controls:**
+D-pad controls mouse pointer
+A : toggle on screen keyboard
+B : mouse click
+
 ## Build instructions
 To compile from source you will need the [Arduboy2 library](https://github.com/MLXXXp/Arduboy2) and the Arduino IDE
 
