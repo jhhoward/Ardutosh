@@ -238,9 +238,36 @@ bool Window::Button(xString label, int16_t buttonX, int16_t buttonY)
 
 bool Window::MenuItem(MenuBarMask item)
 {
-	WindowManager::menuBarItemMask |= item;
+	if (System::state.currentEvent == SystemEvent::MenuItemClicked)
+	{
+		return MenuBar::GetSelectedMenuItem() == item;
+	}
 
-	return (System::state.currentEvent == SystemEvent::MenuItemClicked) && MenuBar::GetSelectedMenuItem() == item;
+	// Check if this is the focused window
+	for (int n = 0; n < WindowManager::maxWindows; n++)
+	{
+		if (WindowManager::drawOrder[n] != WindowManager::invalidWindowHandle)
+		{
+			Window* window = &WindowManager::windows[WindowManager::drawOrder[n]];
+			if (window == this)
+			{
+				WindowManager::menuBarItemMask |= item;
+				return false;
+			}
+			else if (window->type != WindowType::DialogBox)
+			{
+				if (System::state.currentState != System::State::OpeningWindowAnimation)
+				{
+					return false;
+				}
+				else if (System::state.stateElement.window != WindowManager::drawOrder[n])
+				{
+					return false;
+				}
+			}
+		}
+	}
+	return false;
 }
 
 void Window::Slider(int16_t sliderX, int16_t sliderY, uint8_t sliderWidth, uint8_t& current, uint8_t min, uint8_t max)
@@ -472,11 +499,11 @@ bool Window::IsFocused()
 
 void Window::MarkContentsDirty()
 {
-	if (IsFocused())
-	{
-		System::MarkFocusedWindowDirty();
-	}
-	else
+	//if (IsFocused() && System::state.currentState != System::State::OpeningMenu)
+	//{
+	//	System::MarkFocusedWindowDirty();
+	//}
+	//else
 	{
 		System::MarkScreenDirty();
 	}

@@ -106,39 +106,7 @@ void Apps::TerminalApp(Window* window, SystemEvent eventType)
 		{
 			char input = PlatformComm::Read();
 
-			if (input == '\b' || input == 0x7f)
-			{
-				// Backspace
-				if (bufferPos > 0)
-				{
-					buffer[--bufferPos] = '\0';
-				}
-			}
-			else if (input == '\0')
-			{
-				// Null character
-				buffer[bufferPos++] = ' ';
-			}
-			else if (bufferPos < bufferSize - 2)
-			{
-				buffer[bufferPos++] = input;
-
-				/*
-				For debugging uncomment this for HEX code output
-				int upper = ((uint8_t)(input)) >> 4;
-				int lower = ((uint8_t)(input)) & 0xf;
-				if (upper < 0xa)
-					buffer[bufferPos++] = '0' + upper;
-				else
-					buffer[bufferPos++] = 'A' + upper - 0xa;
-
-				if (lower < 0xa)
-					buffer[bufferPos++] = '0' + lower;
-				else
-					buffer[bufferPos++] = 'A' + lower - 0xa;
-					*/
-			}
-			else
+			if (bufferPos == bufferSize - 1)
 			{
 				int cutoff = str.GetLineEndIndex(0, numColumns);
 				bufferPos -= cutoff;
@@ -146,12 +114,80 @@ void Apps::TerminalApp(Window* window, SystemEvent eventType)
 				{
 					buffer[n] = buffer[n + cutoff];
 				}
-				buffer[bufferPos++] = input;
 
 				for (int n = bufferPos; n < bufferSize; n++)
 					buffer[n] = '\0';
 			}
 
+			static constexpr bool rawMode = false;
+
+			if (rawMode)
+			{
+				if (bufferPos < bufferSize - 5)
+				{
+					int upper = ((uint8_t)(input)) >> 4;
+					int lower = ((uint8_t)(input)) & 0xf;
+					if (upper < 0xa)
+						buffer[bufferPos++] = '0' + upper;
+					else
+						buffer[bufferPos++] = 'a' + upper - 0xa;
+
+					if (lower < 0xa)
+						buffer[bufferPos++] = '0' + lower;
+					else
+						buffer[bufferPos++] = 'a' + lower - 0xa;
+
+					buffer[bufferPos++] = ' ';
+				}
+				receivedData = true;
+				break;
+			}
+			else if (input == '\b' || input == 0x7f)
+			{
+				// Backspace
+				if (bufferPos > 0)
+				{
+					buffer[--bufferPos] = '\0';
+				}
+			}
+			else if (input == '\n')
+			{
+				if (bufferPos > 0 && buffer[bufferPos - 1] == '\r')
+				{
+					buffer[bufferPos - 1] = '\n';
+				}
+				else
+				{
+					buffer[bufferPos++] = input;
+				}
+			}
+			else if (input == 27) // Escape sequences - not really supported but we just want to ignore them
+			{
+				switch (PlatformComm::Read())
+				{
+				case '[':
+					{
+						char escapeNum = PlatformComm::Read();
+						if (escapeNum >= '0' && escapeNum <= '9')
+						{
+							char escapeCode = PlatformComm::Read();
+						}
+					}
+					break;
+				default:
+					break;
+				}
+			}
+			else 
+			{
+				constexpr char firstCharacter = 32;
+				constexpr char lastCharacter = 126;
+
+				if (input >= firstCharacter && input <= lastCharacter)
+				{
+					buffer[bufferPos++] = input;
+				}
+			}
 			receivedData = true;
 		}
 

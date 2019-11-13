@@ -406,7 +406,8 @@ void Platform::DrawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t 
 //char testCommString[] = "test\n";
 char testCommString[] = "This is some test data to test how the terminal processes and displays text.\nHere is another line of stuff.\nAnd another line.\nMore message to stress test the system and to ensure that auto scrolling is working correctly etc.";
 unsigned int testCommPos = 0;
-bool useConsoleInput = true;
+bool useConsoleInput = false;
+bool commWaiting = true;
 
 void PlatformComm::SetBaud(uint32_t rate)
 {
@@ -419,7 +420,7 @@ bool PlatformComm::IsAvailable()
 	{
 		return _kbhit() != 0;
 	}
-	return testCommPos < strlen(testCommString);
+	return commWaiting && testCommPos < strlen(testCommString);
 }
 
 void PlatformComm::Write(uint8_t data)
@@ -436,6 +437,7 @@ uint8_t PlatformComm::Read()
 
 	if (testCommPos < strlen(testCommString))
 	{
+		commWaiting = false;
 		return testCommString[testCommPos++];
 	}
 	return 0;
@@ -617,6 +619,8 @@ int main(int argc, char* argv[])
 			
 			ResolveScreen(ScreenSurface);
 		}
+
+		commWaiting = true;
 
 		if (IsRecording)
 		{
