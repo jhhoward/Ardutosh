@@ -155,6 +155,11 @@ void xString::Insert(char c, int index)
 		data[n] = data[n - 1];
 	}
 	data[index] = c;
+
+	if (index == length)
+	{
+		data[index + 1] = '\0';
+	}
 }
 
 void xString::Remove(int index)
